@@ -6,6 +6,7 @@ Cursor's `stop` payload carries model, input_tokens, output_tokens, cache_read_t
 """
 from __future__ import annotations
 
+import datetime
 import fnmatch
 import json
 import time
@@ -21,6 +22,10 @@ DEFAULTS = {
     "warn_day": 8.0,
     "block_day": 15.0,
     "blocked_models": ["claude-opus-*-high", "*-xhigh", "*-max"],
+    "cycle_day": 1,
+    "cycle_limit": 225.0,
+    "cycle_warn": [0.75, 0.9, 1.0],
+    "notify_each_turn": True,
 }
 
 
@@ -85,6 +90,26 @@ def totals(entries: list, conversation: Optional[str], today: str) -> tuple:
     return round(conv, 4), round(daily, 4)
 
 
+def cycle_start(t: float, cycle_day: int) -> str:
+    """The date the billing cycle containing t started: day `cycle_day` of this month or the previous one."""
+    d = datetime.date.fromtimestamp(t)
+    if d.day >= cycle_day:
+        return d.replace(day=cycle_day).isoformat()
+    prev = d.replace(day=1) - datetime.timedelta(days=1)
+    return prev.replace(day=min(cycle_day, prev.day)).isoformat()
+
+
+def cycle_total(entries: list, home: Path, t: float, cycle_day: int) -> tuple:
+    """Spend this cycle: what Cursor billed up to the seeded CSV, plus the hook's estimates after it.
+    Returns (usd, seeded) where seeded says whether a baseline for this cycle exists."""
+    start = cycle_start(t, cycle_day)
+    base = load_json(home / "baseline.json", {})
+    seeded = base.get("cycle_start") == start
+    billed, until = (float(base.get("billed", 0)), float(base.get("until", 0))) if seeded else (0.0, 0.0)
+    estimated = sum(e["usd"] for e in entries if e["t"] > until and day(e["t"]) >= start)
+    return round(billed + estimated, 4), seeded
+
+
 def crossed(before: float, after: float, limit: float) -> bool:
     return before < limit <= after
 
@@ -104,6 +129,16 @@ def on_stop(payload: dict, home: Path = HOME, now: Callable[[], float] = time.ti
     with (home / "ledger.jsonl").open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(entry) + "\n")
     conv_after, day_after = round(conv_before + usd, 4), round(day_before + usd, 4)
+    cycle_after, seeded = cycle_total(entries + [entry], home, t, cfg["cycle_day"])
+    cycle_before, limit = round(cycle_after - usd, 4), cfg["cycle_limit"]
+    since = "" if seeded else " desde que se instaló; corré `cbudget seed <csv>`"
+    for share in sorted(cfg["cycle_warn"], reverse=True):
+        if crossed(cycle_before, cycle_after, limit * share):
+            notify(f"Cursor: el ciclo ya va ~${cycle_after:.2f} de ${limit:.0f} ({cycle_after / limit:.0%}){since}.")
+            break
+    else:
+        if cfg["notify_each_turn"]:
+            notify(f"turno ~${usd:.2f} · chat ~${conv_after:.2f} · ciclo ~${cycle_after:.2f} de ${limit:.0f}{since}")
     for limit_key, before, after, what in (
             ("block_conversation", conv_before, conv_after, "este chat"),
             ("warn_conversation", conv_before, conv_after, "este chat"),
@@ -181,3 +216,20 @@ def calibrate(rows, table: dict) -> list:
     out = [(m, n, round(b, 2), round(e, 2), rate(m.split(" (")[0], table).get("prefix", "UNKNOWN"))
            for m, (n, b, e) in acc.items()]
     return sorted(out, key=lambda r: -r[2])
+
+
+def seed(rows, home: Path = HOME, now: Callable[[], float] = time.time, cycle_day: Optional[int] = None) -> dict:
+    """Store what Cursor billed this cycle according to its usage CSV, as the base for cycle_total."""
+    t = now()
+    start = cycle_start(t, cycle_day or config(home)["cycle_day"])
+    billed, until = 0.0, 0.0
+    for row in rows:
+        stamp = datetime.datetime.fromisoformat((row.get("Date") or "").replace("Z", "+00:00")).timestamp()
+        if day(stamp) < start:
+            continue
+        billed += csv_event(row)[1]
+        until = max(until, stamp)
+    base = {"cycle_start": start, "billed": round(billed, 2), "until": until}
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "baseline.json").write_text(json.dumps(base), encoding="utf-8")
+    return base

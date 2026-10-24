@@ -12,6 +12,7 @@ python3 cbudget.py install-hook      # lo suma a ~/.cursor/hooks.json sin tocar 
 python3 cbudget.py report --days 7   # gasto estimado por día, modelo y chat
 python3 cbudget.py allow --minutes 30  # levanta los bloqueos un rato
 python3 cbudget.py calibrate usage.csv  # cobrado contra estimado por modelo, desde el CSV del dashboard
+python3 cbudget.py seed usage.csv       # toma lo cobrado este ciclo como base del total del ciclo
 ```
 
 ## Límites por defecto
@@ -22,6 +23,9 @@ python3 cbudget.py calibrate usage.csv  # cobrado contra estimado por modelo, de
 | `block_conversation` | $5 | bloquea los prompts siguientes de ese chat |
 | `warn_day` | $8 | avisa |
 | `block_day` | $15 | bloquea hasta mañana o hasta `allow` |
+| `cycle_day` / `cycle_limit` | 1 / $225 | día en que se reinicia el ciclo y tope del plan |
+| `cycle_warn` | 75%, 90%, 100% | avisa al cruzar esas partes del tope |
+| `notify_each_turn` | sí | después de cada turno: costo del turno, del chat y del ciclo |
 | `blocked_models` | `claude-opus-*-high`, `*-xhigh`, `*-max` | bloquea esos modelos |
 
 Para cambiarlos, escribí solo las claves que quieras en `~/.cursor/budget/config.json`. Los precios están en
@@ -42,6 +46,13 @@ Para cambiarlos, escribí solo las claves que quieras en `~/.cursor/budget/confi
 
 Cada bloqueo queda anotado en `~/.cursor/budget/blocks.jsonl`. Sirve de prueba de que el hook frenó, aunque
 el IDE no muestre el mensaje.
+
+## Gasto del ciclo
+
+El hook no puede preguntarle a Cursor cuánto llevás: suma lo que ve. `cbudget seed <csv>` guarda lo que Cursor cobró
+este ciclo según el CSV y, a partir del último evento del CSV, el hook suma sus estimaciones. Sin `seed`, el total
+del ciclo cuenta solo desde la instalación y el aviso lo dice. Un turno que termina justo después del último evento
+del CSV puede contarse dos veces (centavos).
 
 ## Calibrar
 

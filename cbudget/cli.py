@@ -48,7 +48,12 @@ def report(days: int, home: Path = budget.HOME) -> str:
         by_day[budget.day(e["t"])] += e["usd"]
         by_model[e.get("model")] += e["usd"]
         by_conv[e.get("conversation_id")] += e["usd"]
-    lines = [f"turnos: {len(entries)}  total estimado: ${sum(by_day.values()):.2f}", "", "por día:"]
+    cfg, now = budget.config(home), time.time()
+    cycle, seeded = budget.cycle_total(budget.read_ledger(home), home, now, cfg["cycle_day"])
+    note = "cobrado según el CSV + estimado desde entonces" if seeded else "solo estimado; sin `cbudget seed`"
+    lines = [f"ciclo desde {budget.cycle_start(now, cfg['cycle_day'])}: ${cycle:.2f} de ${cfg['cycle_limit']:.0f} "
+             f"({cycle / cfg['cycle_limit']:.0%}), quedan ${cfg['cycle_limit'] - cycle:.2f}  [{note}]", "",
+             f"turnos: {len(entries)}  total estimado: ${sum(by_day.values()):.2f}", "", "por día:"]
     lines += [f"  {d}  ${v:.2f}" for d, v in sorted(by_day.items())]
     lines += ["", "por modelo:"] + [f"  {m}  ${v:.2f}" for m, v in by_model.most_common()]
     lines += ["", "chats más caros:"] + [f"  {c}  ${v:.2f}" for c, v in by_conv.most_common(5)]
@@ -108,6 +113,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     alw.add_argument("--minutes", type=int, default=30)
     cal = sub.add_parser("calibrate", help="billed vs estimated per model, from Cursor's usage CSV")
     cal.add_argument("csv", type=Path)
+    sed = sub.add_parser("seed", help="take this cycle's billed spend from Cursor's usage CSV")
+    sed.add_argument("csv", type=Path)
     sub.add_parser("install-hook", help="add cbudget to ~/.cursor/hooks.json")
     args = parser.parse_args(argv)
 
@@ -119,6 +126,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
     if args.cmd == "calibrate":
         print(calibrate_report(args.csv))
+        return 0
+    if args.cmd == "seed":
+        import csv
+        with args.csv.open(newline="", encoding="utf-8") as fh:
+            base = budget.seed(csv.DictReader(fh))
+        print(f"ciclo desde {base['cycle_start']}: ${base['billed']:.2f} cobrado según el CSV")
         return 0
     if args.cmd == "allow":
         until = budget.allow(args.minutes)

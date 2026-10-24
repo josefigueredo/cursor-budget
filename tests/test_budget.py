@@ -5,7 +5,7 @@ from pathlib import Path
 
 from cbudget import budget, cli
 
-NOON = 1761300000.0  # 2026-10-24, a fixed clock
+NOON = 1792850000.0  # 2026-10-24 10:53 -03, a fixed clock
 
 
 def stop(model="claude-sonnet-5-5-high", conv="c1", **tokens):
@@ -67,10 +67,41 @@ class TestStop(Home):
         turn = stop(input_tokens=1_000_000, cache_read_tokens=900_000, output_tokens=50_000)  # ~$1.1
         for _ in range(3):
             self.run_stop(turn)
-        self.assertEqual(len([n for n in self.notes if "este chat" in n]), 1)
+        self.assertEqual(len([n for n in self.notes if "este chat ya va" in n]), 1)
 
     def test_answers_an_empty_object(self):
         self.assertEqual(self.run_stop(stop(input_tokens=10)), {})
+
+
+class TestCycle(Home):
+    ROW = {"Model": "claude-sonnet-5-5-high", "Cost": "100.00", "Date": "2026-10-20T12:00:00.000Z"}
+
+    def test_cycle_starts_on_the_configured_day(self):
+        self.assertEqual(budget.cycle_start(NOON, 1), "2026-10-01")
+        self.assertEqual(budget.cycle_start(NOON, 25), "2026-09-25")
+
+    def test_seeded_cycle_adds_billed_and_later_estimates_only(self):
+        old = dict(self.ROW, Date="2026-09-30T12:00:00.000Z")  # previous cycle: ignored
+        budget.seed([self.ROW, old], home=self.home, now=lambda: NOON, cycle_day=1)
+        self.run_stop(stop(input_tokens=1_000_000, cache_read_tokens=1_000_000))  # $0.35 after the CSV
+        total, seeded = budget.cycle_total(budget.read_ledger(self.home), self.home, NOON, 1)
+        self.assertTrue(seeded)
+        self.assertAlmostEqual(total, 100.35, places=2)
+
+    def test_warns_when_the_cycle_crosses_a_share_of_the_limit(self):
+        (self.home / "config.json").write_text(json.dumps({"cycle_limit": 100.2}), encoding="utf-8")
+        budget.seed([self.ROW], home=self.home, now=lambda: NOON, cycle_day=1)
+        self.run_stop(stop(input_tokens=1_000_000, cache_read_tokens=1_000_000))
+        self.assertTrue(any("el ciclo ya va" in n and "100%" in n for n in self.notes))
+
+    def test_each_turn_reports_the_cycle_unless_disabled(self):
+        self.run_stop(stop(input_tokens=10_000))
+        self.assertIn("ciclo", self.notes[-1])
+        self.assertIn("cbudget seed", self.notes[-1])
+        (self.home / "config.json").write_text(json.dumps({"notify_each_turn": False}), encoding="utf-8")
+        self.notes.clear()
+        self.run_stop(stop(input_tokens=10_000))
+        self.assertEqual(self.notes, [])
 
 
 class TestSubmit(Home):
