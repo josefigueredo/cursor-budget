@@ -117,8 +117,10 @@ def report(days: int, home: Path = budget.HOME, color: bool = False, now: Option
     out = ["", " " + paint("Uso de Cursor", TEXT, bold=True)]
 
     # Monthly usage
-    source = "Cobrado según el CSV, más lo estimado desde entonces." if seeded else \
-        "Solo estimado desde la instalación: corré `cbudget seed <csv>`."
+    base_source = budget.load_json(home / "baseline.json", {}).get("source")
+    source = ("Lo que mostraba Cursor al cargarlo, más lo estimado desde entonces." if seeded and base_source == "amount"
+              else "Cobrado según el CSV, más lo estimado desde entonces." if seeded
+              else "Solo lo visto desde la instalación: `cbudget seed --amount <usd>`.")
     out += card("Uso del ciclo", [
         paint(money(cycle), TEXT, bold=True) + paint(f" / {money(limit)}", MUTED),
         line_bar(share, size - 4, paint, ACCENT if share < 0.9 else RED),

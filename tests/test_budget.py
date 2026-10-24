@@ -88,6 +88,14 @@ class TestCycle(Home):
         self.assertTrue(seeded)
         self.assertAlmostEqual(total, 100.35, places=2)
 
+    def test_amount_seed_sets_the_cycle_without_a_csv(self):
+        budget.seed_amount(157.21, home=self.home, now=lambda: NOON - 60, cycle_day=1)
+        self.run_stop(stop(input_tokens=1_000_000, cache_read_tokens=1_000_000))
+        total, seeded = budget.cycle_total(budget.read_ledger(self.home), self.home, NOON, 1)
+        self.assertTrue(seeded)
+        self.assertAlmostEqual(total, 157.56, places=2)
+        self.assertIn("Lo que mostraba Cursor", render.report(7, home=self.home, now=NOON))
+
     def test_warns_when_the_cycle_crosses_a_share_of_the_limit(self):
         (self.home / "config.json").write_text(json.dumps({"cycle_limit": 100.2}), encoding="utf-8")
         budget.seed([self.ROW], home=self.home, now=lambda: NOON, cycle_day=1)
@@ -97,7 +105,7 @@ class TestCycle(Home):
     def test_each_turn_reports_the_cycle_unless_disabled(self):
         self.run_stop(stop(input_tokens=10_000))
         self.assertIn("ciclo", self.notes[-1])
-        self.assertIn("cbudget seed", self.notes[-1])
+        self.assertIn("cbudget seed --amount", self.notes[-1])
         (self.home / "config.json").write_text(json.dumps({"notify_each_turn": False}), encoding="utf-8")
         self.notes.clear()
         self.run_stop(stop(input_tokens=10_000))

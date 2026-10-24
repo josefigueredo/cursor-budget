@@ -33,7 +33,7 @@ cbudget alias                # agrega o actualiza el alias en el rc de la shell
 cbudget report --days 7      # ciclo, presupuestos y gasto por día, modelo y chat (en color; --color never o NO_COLOR para texto plano)
 cbudget allow --minutes 30   # levanta los bloqueos un rato
 cbudget calibrate usage.csv  # cobrado contra estimado por modelo, desde el CSV del dashboard
-cbudget seed usage.csv       # toma lo cobrado este ciclo como base del total del ciclo
+cbudget seed usage.csv       # toma lo cobrado este ciclo como base del total del ciclo (o --amount 157.21)
 ```
 
 ![cbudget report](docs/report.png)
@@ -74,6 +74,11 @@ Cada bloqueo queda anotado en `~/.cursor/budget/blocks.jsonl`. Sirve de prueba d
 el IDE no muestre el mensaje.
 
 ## Gasto del ciclo
+
+Sin CSV: mirá en cursor.com/dashboard → Usage el monto de "Your monthly usage" (el primero de "$157.21 / $225") y
+corré `cbudget seed --amount 157.21`. Es la vía para quien no exporta archivos; no trae el detalle por modelo ni por
+día, así que los presupuestos por modelo cuentan desde ese momento. Si instalás el día que arranca el ciclo, no
+hace falta ningún seed: el registro ve el ciclo entero.
 
 El hook no puede preguntarle a Cursor cuánto llevás: suma lo que ve. `cbudget seed <csv>` guarda lo que Cursor cobró
 este ciclo según el CSV y, a partir del último evento del CSV, el hook suma sus estimaciones. Sin `seed`, el total

@@ -150,7 +150,7 @@ def on_stop(payload: dict, home: Path = HOME, now: Callable[[], float] = time.ti
     conv_after, day_after = round(conv_before + usd, 4), round(day_before + usd, 4)
     cycle_after, seeded = cycle_total(entries + [entry], home, t, cfg["cycle_day"])
     cycle_before, limit = round(cycle_after - usd, 4), cfg["cycle_limit"]
-    since = "" if seeded else " desde que se instaló; corré `cbudget seed <csv>`"
+    since = "" if seeded else " desde que se instaló; cargá lo gastado con `cbudget seed --amount <usd>`"
     for share in sorted(cfg["cycle_warn"], reverse=True):
         if crossed(cycle_before, cycle_after, limit * share):
             notify(f"Cursor: el ciclo ya va ~${cycle_after:.2f} de ${limit:.0f} ({cycle_after / limit:.0%}){since}.")
@@ -275,6 +275,18 @@ def seed(rows, home: Path = HOME, now: Callable[[], float] = time.time, cycle_da
         cell[model] = round(cell.get(model, 0.0) + usd, 4)
         until = max(until, stamp)
     base = {"cycle_start": start, "billed": round(billed, 2), "until": until, "by_model": by_model, "by_day": by_day}
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "baseline.json").write_text(json.dumps(base), encoding="utf-8")
+    return base
+
+
+def seed_amount(usd: float, home: Path = HOME, now: Callable[[], float] = time.time,
+                cycle_day: Optional[int] = None) -> dict:
+    """The no-CSV seed: the spend Cursor's Usage page shows right now. No per-model or per-day detail, so model
+    budgets count only what the hooks see from here on."""
+    t = now()
+    base = {"cycle_start": cycle_start(t, cycle_day or config(home)["cycle_day"]), "billed": round(usd, 2),
+            "until": t, "by_model": {}, "by_day": {}, "source": "amount"}
     home.mkdir(parents=True, exist_ok=True)
     (home / "baseline.json").write_text(json.dumps(base), encoding="utf-8")
     return base

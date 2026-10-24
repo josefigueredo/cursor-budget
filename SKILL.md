@@ -25,8 +25,13 @@ python3 ~/.cursor/budget/app/cbudget.py
 | Their limits and whether they make sense | `cb limits --color never` |
 | Only the problems | `cb limits check` (exit 1 when there is an error) |
 
-Answer with the numbers that matter, not the whole screen. The cycle total is what Cursor billed according to the
-last seeded CSV plus the hooks' estimate since; say so when it matters.
+Answer with the numbers that matter, not the whole screen. The cycle total is the seeded amount plus the hooks'
+estimate since; say so when it matters.
+
+If the report says it only counts since installation (nothing seeded this cycle), the total is short by whatever was
+spent before. Ask the user for the number on Cursor's Usage page (cursor.com/dashboard, "Your monthly usage", the
+first amount of "$157.21 / $225") and run `cb seed --amount <that number>`. That is the no-CSV path, meant for
+people who do not export files. A CSV (`cb seed <csv>`) adds the split per model and per day; use it when they have one.
 
 ## Change
 
@@ -41,7 +46,7 @@ the user's call, and they see every change in a notification and in `~/.cursor/b
 | Remove a model's budget | `cb limits model '<pattern>' --remove` |
 | Block or unblock a model | `cb limits block '<pattern>'` / `cb limits unblock '<pattern>'` |
 | Lift every block for a while | `cb allow --minutes <n>` |
-| Take the billed spend from a usage CSV they exported | `cb seed <csv>` |
+| Load what Cursor shows as spent this cycle | `cb seed --amount <usd>` (or `cb seed <csv>` with an exported usage CSV) |
 
 Patterns use shell globs against Cursor's model ids (`claude-opus-5-5-high`, `auto-smart`, `composer-2.5`,
 `gpt-5.6-terra-medium`). For model budgets the first matching pattern wins, in the order of config.json.

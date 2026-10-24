@@ -153,8 +153,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     alw.add_argument("--minutes", type=int, default=30)
     cal = sub.add_parser("calibrate", help="billed vs estimated per model, from Cursor's usage CSV")
     cal.add_argument("csv", type=Path)
-    sed = sub.add_parser("seed", help="take this cycle's billed spend from Cursor's usage CSV")
-    sed.add_argument("csv", type=Path)
+    sed = sub.add_parser("seed", help="this cycle's spend so far: from Cursor's usage CSV, or the amount its page shows")
+    sed.add_argument("csv", type=Path, nargs="?")
+    sed.add_argument("--amount", help="what Cursor's Usage page shows, e.g. 157.21")
     lim = sub.add_parser("limits", help="show, check and change the limits")
     lim.add_argument("--color", choices=("auto", "always", "never"), default="auto")
     lim.add_argument("--by", default=None, help="who changes them, for changes.jsonl (default: terminal or agente)")
@@ -185,10 +186,22 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(calibrate_report(args.csv))
         return 0
     if args.cmd == "seed":
+        if (args.csv is None) == (args.amount is None):
+            print("indicá el CSV o --amount con lo que muestra la página de uso de Cursor", file=sys.stderr)
+            return 2
+        if args.amount is not None:
+            try:
+                base = budget.seed_amount(budget.parse_value("cycle_limit", args.amount))
+            except ValueError as exc:
+                print(exc, file=sys.stderr)
+                return 2
+            print(f"Ciclo desde {base['cycle_start']}: ${base['billed']:.2f} según la página de Cursor. "
+                  f"Desde ahora suma lo que vean los hooks.")
+            return 0
         import csv
         with args.csv.open(newline="", encoding="utf-8") as fh:
             base = budget.seed(csv.DictReader(fh))
-        print(f"ciclo desde {base['cycle_start']}: ${base['billed']:.2f} cobrado según el CSV")
+        print(f"Ciclo desde {base['cycle_start']}: ${base['billed']:.2f} cobrado según el CSV")
         return 0
     if args.cmd == "allow":
         until = budget.allow(args.minutes)
