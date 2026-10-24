@@ -9,7 +9,7 @@ Dos hooks globales de Cursor que cuidan el gasto:
 
 ```bash
 python3 cbudget.py install-hook      # lo suma a ~/.cursor/hooks.json sin tocar los demás (deja un .bak)
-python3 cbudget.py report --days 7   # gasto estimado por día, modelo y chat
+python3 cbudget.py report --days 7   # ciclo, presupuestos y gasto por día, modelo y chat (en color; --color never o NO_COLOR para texto plano)
 python3 cbudget.py allow --minutes 30  # levanta los bloqueos un rato
 python3 cbudget.py calibrate usage.csv  # cobrado contra estimado por modelo, desde el CSV del dashboard
 python3 cbudget.py seed usage.csv       # toma lo cobrado este ciclo como base del total del ciclo

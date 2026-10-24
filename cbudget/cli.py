@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import collections
 import json
 import shlex
 import subprocess
@@ -11,7 +10,7 @@ import time
 from pathlib import Path
 from typing import Optional, Sequence
 
-from . import budget
+from . import budget, render
 
 HOOKS = Path.home() / ".cursor" / "hooks.json"
 EVENTS = ("stop", "beforeSubmitPrompt")
@@ -38,34 +37,6 @@ def hook(raw: str) -> dict:
     except Exception:  # noqa: BLE001 - see docstring
         pass
     return {}
-
-
-def report(days: int, home: Path = budget.HOME) -> str:
-    since = budget.day(time.time() - (days - 1) * 86400)
-    entries = [e for e in budget.read_ledger(home) if budget.day(e["t"]) >= since]
-    by_day, by_model, by_conv = collections.Counter(), collections.Counter(), collections.Counter()
-    for e in entries:
-        by_day[budget.day(e["t"])] += e["usd"]
-        by_model[e.get("model")] += e["usd"]
-        by_conv[e.get("conversation_id")] += e["usd"]
-    cfg, now = budget.config(home), time.time()
-    cycle, seeded = budget.cycle_total(budget.read_ledger(home), home, now, cfg["cycle_day"])
-    note = "cobrado según el CSV + estimado desde entonces" if seeded else "solo estimado; sin `cbudget seed`"
-    lines = [f"ciclo desde {budget.cycle_start(now, cfg['cycle_day'])}: ${cycle:.2f} de ${cfg['cycle_limit']:.0f} "
-             f"({cycle / cfg['cycle_limit']:.0%}), quedan ${cfg['cycle_limit'] - cycle:.2f}  [{note}]", "",
-             f"turnos: {len(entries)}  total estimado: ${sum(by_day.values()):.2f}", ""]
-    ledger = budget.read_ledger(home)
-    if cfg["model_budgets"]:
-        lines.append("presupuesto por modelo (ciclo):")
-        for pattern, cap in cfg["model_budgets"].items():
-            spent = budget.model_spend(ledger, home, now, cfg["cycle_day"], pattern)
-            lines.append(f"  {pattern:20s} ${spent:7.2f} de ${float(cap):.0f}  quedan ${float(cap) - spent:.2f}")
-        lines.append("")
-    lines.append("por día:")
-    lines += [f"  {d}  ${v:.2f}" for d, v in sorted(by_day.items())]
-    lines += ["", "por modelo:"] + [f"  {m}  ${v:.2f}" for m, v in by_model.most_common()]
-    lines += ["", "chats más caros:"] + [f"  {c}  ${v:.2f}" for c, v in by_conv.most_common(5)]
-    return "\n".join(lines)
 
 
 def calibrate_report(csv_path: Path, tolerance: float = 0.10) -> str:
@@ -117,6 +88,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     sub.add_parser("hook", help="Cursor hook entry point (stdin: the hook payload)")
     rep = sub.add_parser("report", help="estimated spend from the ledger")
     rep.add_argument("--days", type=int, default=7)
+    rep.add_argument("--color", choices=("auto", "always", "never"), default="auto")
     alw = sub.add_parser("allow", help="lift blocks for a while")
     alw.add_argument("--minutes", type=int, default=30)
     cal = sub.add_parser("calibrate", help="billed vs estimated per model, from Cursor's usage CSV")
@@ -130,7 +102,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(json.dumps(hook(sys.stdin.read())))
         return 0
     if args.cmd == "report":
-        print(report(args.days))
+        color = {"always": True, "never": False}.get(args.color, render.color_enabled())
+        print(render.report(args.days, color=color))
         return 0
     if args.cmd == "calibrate":
         print(calibrate_report(args.csv))

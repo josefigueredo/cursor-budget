@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from cbudget import budget, cli
+from cbudget import budget, cli, render
 
 NOON = 1792850000.0  # 2026-10-24 10:53 -03, a fixed clock
 
@@ -205,6 +205,26 @@ class TestCalibrate(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = self.write(tmp, '"d","u","","","","","","Included","cursor-grok-4.6-high","No","0","1000000","0","0","1000000","1.00"\n')
             self.assertIn("<- ajustar", cli.calibrate_report(path))
+
+
+class TestReport(Home):
+    def test_plain_report_has_sections_and_no_escape_codes(self):
+        (self.home / "config.json").write_text(json.dumps({"model_budgets": {"claude-*": 10}}), encoding="utf-8")
+        self.run_stop(stop(input_tokens=1_000_000))
+        text = render.report(7, home=self.home, color=False, now=NOON)
+        for heading in ("CURSOR BUDGET", "CICLO", "PRESUPUESTO POR MODELO", "ÚLTIMOS 7 DÍAS", "Chats más caros"):
+            self.assertIn(heading, text)
+        self.assertNotIn("\033[", text)
+        self.assertIn("quedan 8 días", text)
+
+    def test_color_report_paints_a_spent_budget_red(self):
+        (self.home / "config.json").write_text(json.dumps({"model_budgets": {"claude-*": 1}}), encoding="utf-8")
+        self.run_stop(stop(input_tokens=1_000_000))
+        self.assertIn("\033[31m", render.report(7, home=self.home, color=True, now=NOON))
+
+    def test_next_cycle_handles_short_months(self):
+        self.assertEqual(render.next_cycle("2026-10-01", 1).isoformat(), "2026-11-01")
+        self.assertEqual(render.next_cycle("2027-01-31", 31).isoformat(), "2027-02-28")
 
 
 class TestCli(unittest.TestCase):
