@@ -137,6 +137,13 @@ def on_submit(payload: dict, home: Path = HOME, now: Callable[[], float] = time.
         reason = f"hoy ya van ~${daily:.2f}; corré `cbudget allow` si de verdad hace falta"
     if not reason:
         return {}
+    try:  # evidence that a block fired, also where the user_message is not shown
+        home.mkdir(parents=True, exist_ok=True)
+        with (home / "blocks.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"t": round(t), "conversation_id": payload.get("conversation_id"), "model": model,
+                                 "reason": reason}) + "\n")
+    except OSError:
+        pass
     notify(f"Cursor bloqueado: {reason}")
     return {"continue": False, "user_message": f"cursor-budget: {reason}"}
 
@@ -146,3 +153,31 @@ def allow(minutes: int, home: Path = HOME, now: Callable[[], float] = time.time)
     home.mkdir(parents=True, exist_ok=True)
     (home / "allow.json").write_text(json.dumps({"until": until}), encoding="utf-8")
     return until
+
+
+def csv_event(row: dict) -> tuple:
+    """A row of Cursor's usage export as (label, billed usd, hook-shaped event). Auto-routed rows read
+    `grok-4.7-high (Auto Balanced)`: priced by the model before the parenthesis."""
+    def num(key: str) -> float:
+        try:
+            return float(row.get(key) or 0)
+        except ValueError:  # "Free"
+            return 0.0
+    write, read = num("Input (w/ Cache Write)"), num("Cache Read")
+    event = {"model": (row.get("Model") or "").split(" (")[0], "cache_write_tokens": write, "cache_read_tokens": read,
+             "input_tokens": write + read + num("Input (w/o Cache Write)"), "output_tokens": num("Output Tokens")}
+    return row.get("Model") or "", num("Cost"), event
+
+
+def calibrate(rows, table: dict) -> list:
+    """Billed against estimated per model: (model, events, billed, estimated, matched prefix)."""
+    acc = {}
+    for row in rows:
+        label, billed, event = csv_event(row)
+        if label == "usage-correction":
+            continue
+        n, b, e = acc.get(label, (0, 0.0, 0.0))
+        acc[label] = (n + 1, b + billed, e + cost(event, table))
+    out = [(m, n, round(b, 2), round(e, 2), rate(m.split(" (")[0], table).get("prefix", "UNKNOWN"))
+           for m, (n, b, e) in acc.items()]
+    return sorted(out, key=lambda r: -r[2])

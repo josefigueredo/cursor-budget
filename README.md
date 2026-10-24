@@ -11,6 +11,7 @@ Dos hooks globales de Cursor que cuidan el gasto:
 python3 cbudget.py install-hook      # lo suma a ~/.cursor/hooks.json sin tocar los demás (deja un .bak)
 python3 cbudget.py report --days 7   # gasto estimado por día, modelo y chat
 python3 cbudget.py allow --minutes 30  # levanta los bloqueos un rato
+python3 cbudget.py calibrate usage.csv  # cobrado contra estimado por modelo, desde el CSV del dashboard
 ```
 
 ## Límites por defecto
@@ -37,6 +38,15 @@ Para cambiarlos, escribí solo las claves que quieras en `~/.cursor/budget/confi
 - La fórmula (precio de API, más 1.25x en la escritura de caché, más $0.25 por millón en modelos de terceros)
   reproduce la factura del 21 de octubre ($70.26 de Opus) con un error de ±5%. Hay un test que lo controla.
   Un turno de Gemini Flash dio $0.017 estimado, contra $0.02 en el CSV.
+
+Cada bloqueo queda anotado en `~/.cursor/budget/blocks.jsonl`. Sirve de prueba de que el hook frenó, aunque
+el IDE no muestre el mensaje.
+
+## Calibrar
+
+Exportá el CSV en el dashboard de Cursor (Usage → Export) y corré `cbudget calibrate <csv>`. Marca con
+`<- ajustar` los modelos con más de 10% de error y los que no coinciden con ningún precio. Con el CSV de octubre de
+2026 dio $161.92 estimado contra $156.34 cobrado (+4%).
 
 ## Límites conocidos
 

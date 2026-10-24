@@ -98,6 +98,11 @@ class TestSubmit(Home):
         answer = self.run_submit({"model": "claude-sonnet-5-5-high", "conversation_id": "e"})
         self.assertIn("hoy", answer["user_message"])
 
+    def test_a_block_leaves_evidence(self):
+        self.run_submit({"model": "claude-opus-5-5-high", "conversation_id": "c9"})
+        [line] = (self.home / "blocks.jsonl").read_text().splitlines()
+        self.assertEqual(json.loads(line)["model"], "claude-opus-5-5-high")
+
     def test_allow_lifts_the_blocks(self):
         budget.allow(30, home=self.home, now=lambda: NOON)
         self.assertEqual(self.run_submit({"model": "claude-opus-5-5-high", "conversation_id": "c9"}), {})
@@ -106,6 +111,33 @@ class TestSubmit(Home):
     def test_config_overrides_the_limits(self):
         (self.home / "config.json").write_text(json.dumps({"blocked_models": []}), encoding="utf-8")
         self.assertEqual(self.run_submit({"model": "claude-opus-5-5-high", "conversation_id": "c9"}), {})
+
+
+class TestCalibrate(unittest.TestCase):
+    HEADER = ("Date,User,PR Author,Repo,PR Number,Cloud Agent ID,Automation ID,Kind,Model,Max Mode,"
+              "Input (w/ Cache Write),Input (w/o Cache Write),Cache Read,Output Tokens,Total Tokens,Cost\n")
+
+    def write(self, tmp, *rows):
+        path = Path(tmp) / "usage.csv"
+        path.write_text(self.HEADER + "".join(rows), encoding="utf-8")
+        return path
+
+    def test_groups_by_model_and_prices_auto_routed_rows_by_the_routed_model(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self.write(tmp,
+                              '"d","u","","","","","","Included","grok-4.7-high (Auto Balanced)","No","0","1000000","0","0","1000000","2.00"\n',
+                              '"d","u","","","","","","Included","kimi-k3 (Auto Balanced)","No","0","0","0","0","0","Free"\n',
+                              '"d","u","","","","","","","usage-correction","","0","0","0","0","0","1.06"\n')
+            import csv
+            with path.open() as fh:
+                rows = budget.calibrate(csv.DictReader(fh), budget.prices(Path("/nonexistent")))
+        self.assertEqual(rows[0], ("grok-4.7-high (Auto Balanced)", 1, 2.0, 2.0, "grok"))
+        self.assertEqual([r[0] for r in rows], ["grok-4.7-high (Auto Balanced)", "kimi-k3 (Auto Balanced)"])
+
+    def test_report_flags_a_model_off_by_more_than_ten_percent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self.write(tmp, '"d","u","","","","","","Included","cursor-grok-4.6-high","No","0","1000000","0","0","1000000","1.00"\n')
+            self.assertIn("<- ajustar", cli.calibrate_report(path))
 
 
 class TestCli(unittest.TestCase):

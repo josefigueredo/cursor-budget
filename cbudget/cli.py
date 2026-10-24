@@ -55,6 +55,21 @@ def report(days: int, home: Path = budget.HOME) -> str:
     return "\n".join(lines)
 
 
+def calibrate_report(csv_path: Path, tolerance: float = 0.10) -> str:
+    import csv
+    with csv_path.open(newline="", encoding="utf-8") as fh:
+        rows = budget.calibrate(csv.DictReader(fh), budget.prices())
+    lines = [f"{'modelo':42s} {'eventos':>7s} {'cobrado':>9s} {'estimado':>9s} {'error':>6s}  precio usado"]
+    billed = estimated = 0.0
+    for model, n, b, e, prefix in rows:
+        billed, estimated = billed + b, estimated + e
+        err = (e - b) / b if b else 0.0
+        flag = "  <- ajustar" if b >= 0.5 and abs(err) > tolerance or prefix == "UNKNOWN" and b > 0 else ""
+        lines.append(f"{model:42s} {n:7d} {b:9.2f} {e:9.2f} {err:+6.0%}  {prefix}{flag}")
+    lines.append(f"{'total':42s} {'':7s} {billed:9.2f} {estimated:9.2f}")
+    return "\n".join(lines)
+
+
 def _ours(entry: dict) -> bool:
     try:
         argv = shlex.split(str(entry.get("command", "")))
@@ -91,6 +106,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     rep.add_argument("--days", type=int, default=7)
     alw = sub.add_parser("allow", help="lift blocks for a while")
     alw.add_argument("--minutes", type=int, default=30)
+    cal = sub.add_parser("calibrate", help="billed vs estimated per model, from Cursor's usage CSV")
+    cal.add_argument("csv", type=Path)
     sub.add_parser("install-hook", help="add cbudget to ~/.cursor/hooks.json")
     args = parser.parse_args(argv)
 
@@ -99,6 +116,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
     if args.cmd == "report":
         print(report(args.days))
+        return 0
+    if args.cmd == "calibrate":
+        print(calibrate_report(args.csv))
         return 0
     if args.cmd == "allow":
         until = budget.allow(args.minutes)
