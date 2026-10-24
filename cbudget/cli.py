@@ -89,6 +89,10 @@ def install_hook(command: str, path: Path = HOOKS) -> bool:
     return changed
 
 
+NOTIFY_HINT = ("Mandé una notificación de prueba. Si no la viste, los avisos no te van a llegar: abrí Configuración "
+               "del Sistema → Notificaciones → Script Editor, activá «Permitir notificaciones» y probá de nuevo con "
+               "`cbudget notify-test`.")
+
 ALIAS_MARK = "# cursor-budget"
 
 
@@ -155,7 +159,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     cal.add_argument("csv", type=Path)
     sed = sub.add_parser("seed", help="this cycle's spend so far: from Cursor's usage CSV, or the amount its page shows")
     sed.add_argument("csv", type=Path, nargs="?")
-    sed.add_argument("--amount", help="what Cursor's Usage page shows, e.g. 157.21")
+    sed.add_argument("--amount", help="what Cursor's Usage page shows, e.g. 84.30")
     lim = sub.add_parser("limits", help="show, check and change the limits")
     lim.add_argument("--color", choices=("auto", "always", "never"), default="auto")
     lim.add_argument("--by", default=None, help="who changes them, for changes.jsonl (default: terminal or agente)")
@@ -173,6 +177,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         lsub.add_parser(name, help=f"{name} a model pattern").add_argument("pattern")
     sub.add_parser("install-hook", help="add cbudget to ~/.cursor/hooks.json")
     sub.add_parser("alias", help="add `alias cbudget=...` to ~/.zshrc (or ~/.bashrc)")
+    sub.add_parser("notify-test", help="send a test notification, to check that macOS shows them")
     args = parser.parse_args(argv)
 
     if args.cmd == "hook":
@@ -209,6 +214,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
     if args.cmd == "limits":
         return limits_command(args)
+    if args.cmd == "notify-test":
+        notify("Prueba: así se ven los avisos de gasto de Cursor.")
+        print(NOTIFY_HINT)
+        return 0
     entry = Path(__file__).resolve().parent.parent / "cbudget.py"
     if args.cmd == "alias":
         rc = rc_file()

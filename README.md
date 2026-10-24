@@ -27,7 +27,8 @@ Con el repo ya clonado:
 Copia el programa a `~/.cursor/budget/app` (su propia carpeta, junto al registro y la configuración), apunta los
 hooks de Cursor a esa copia y agrega `alias cbudget=...` a `~/.zshrc` (o `~/.bashrc`). Así los hooks siguen andando
 aunque este repo se mueva o cambie de rama. Volver a correrlo actualiza la copia sin tocar `config.json`,
-`ledger.jsonl` ni `baseline.json`. El hook y el alias usan el `python3` con el que se instaló, con ruta absoluta,
+`ledger.jsonl` ni `baseline.json`. Al final manda una notificación de prueba: si no aparece, macOS las tiene
+bloqueadas para Script Editor y el instalador dice cómo habilitarlas (`CURSOR_BUDGET_NO_NOTIFY=1` la saltea). El hook y el alias usan el `python3` con el que se instaló, con ruta absoluta,
 porque Cursor no siempre hereda el PATH de la terminal: si actualizás Python a otra versión menor, volvé a instalar.
 
 ## Comandos
@@ -44,12 +45,14 @@ cbudget alias                # agrega o actualiza el alias en el rc de la shell
 cbudget report --days 7      # ciclo, presupuestos y gasto por día, modelo y chat (en color; --color never o NO_COLOR para texto plano)
 cbudget allow --minutes 30   # levanta los bloqueos un rato
 cbudget calibrate usage.csv  # cobrado contra estimado por modelo, desde el CSV del dashboard
-cbudget seed usage.csv       # toma lo cobrado este ciclo como base del total del ciclo (o --amount 157.21)
+cbudget seed usage.csv       # toma lo cobrado este ciclo como base del total del ciclo (o --amount 84.30)
+cbudget notify-test          # manda una notificación de prueba y explica cómo habilitarlas
 ```
 
 ![cbudget report](docs/report.png)
 
-Captura de la salida real de `cbudget report` en color, pasada a HTML (2026-10-24).
+Maqueta: la salida real de `cbudget report` en color, con datos inventados. La genera `python3 docs/demo.py
+report.html` (un ciclo de ejemplo, sin el gasto de nadie); la captura es esa página a 900 px de ancho.
 
 ## Límites por defecto
 
@@ -78,16 +81,16 @@ Para cambiarlos, escribí solo las claves que quieras en `~/.cursor/budget/confi
   **En el IDE también bloquea** (Cursor 2026.10.22, probado el 2026-10-24): muestra "Submission blocked by hook" con el
   `user_message` y el prompt no llega al modelo.
 - La fórmula (precio de API, más 1.25x en la escritura de caché, más $0.25 por millón en modelos de terceros)
-  reproduce la factura del 21 de octubre ($70.26 de Opus) con un error de ±5%. Hay un test que lo controla.
-  Un turno de Gemini Flash dio $0.017 estimado, contra $0.02 en el CSV.
+  reproduce una factura real de Opus con un error de ±5%. El test `test_opus_turn_follows_the_formula` fija la
+  fórmula con números de ejemplo.
 
 Cada bloqueo queda anotado en `~/.cursor/budget/blocks.jsonl`. Sirve de prueba de que el hook frenó, aunque
 el IDE no muestre el mensaje.
 
 ## Gasto del ciclo
 
-Sin CSV: mirá en cursor.com/dashboard → Usage el monto de "Your monthly usage" (el primero de "$157.21 / $225") y
-corré `cbudget seed --amount 157.21`. Es la vía para quien no exporta archivos; no trae el detalle por modelo ni por
+Sin CSV: mirá en cursor.com/dashboard → Usage el monto de "Your monthly usage" (el primero de "$84.30 / $200", en el ejemplo) y
+corré `cbudget seed --amount 84.30`. Es la vía para quien no exporta archivos; no trae el detalle por modelo ni por
 día, así que los presupuestos por modelo cuentan desde ese momento. Si instalás el día que arranca el ciclo, no
 hace falta ningún seed: el registro ve el ciclo entero.
 
@@ -114,8 +117,8 @@ del CSV que Auto derivó (`grok-4.7-high (Auto Balanced)`) cuentan para `auto*`,
 ## Calibrar
 
 Exportá el CSV en el dashboard de Cursor (Usage → Export) y corré `cbudget calibrate <csv>`. Marca con
-`<- ajustar` los modelos con más de 10% de error y los que no coinciden con ningún precio. Con el CSV de octubre de
-2026 dio $161.92 estimado contra $156.34 cobrado (+4%).
+`<- ajustar` los modelos con más de 10% de error y los que no coinciden con ningún precio. En la calibración
+original el total estimado quedó 4% arriba de lo cobrado; cada modelo, entre −7% y +6%.
 
 ## Límites conocidos
 

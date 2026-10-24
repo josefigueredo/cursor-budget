@@ -6,12 +6,13 @@
 # the shell rc, and exposes the skill: ~/.agents/skills/cursor-budget (Cursor) -> the copy, and
 # ~/.claude/skills/cursor-budget and ~/.codex/skills/cursor-budget -> ../../.agents/skills/cursor-budget.
 # Re-running updates the copy; config.json, ledger.jsonl, baseline.json and changes.jsonl are never touched.
+# Ends with a test notification, since every warning arrives as one (CURSOR_BUDGET_NO_NOTIFY=1 skips it).
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEST="${CURSOR_BUDGET_HOME:-$HOME/.cursor/budget}/app"
 case "${1:-}" in
-  -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
+  -h|--help) sed -n '2,9p' "$0"; exit 0 ;;
   "") ;;
   *) echo "unknown argument: $1" >&2; exit 2 ;;
 esac
@@ -42,4 +43,8 @@ for host in .claude .codex; do
   link "../../.agents/skills/cursor-budget" "$HOME/$host/skills/cursor-budget" || status=1
 done
 echo "skill: cursor-budget (Cursor, Claude Code, Codex) -> $DEST"
+# the warnings arrive as macOS notifications; one now shows whether they are allowed (CURSOR_BUDGET_NO_NOTIFY=1 skips it)
+if [ "$(uname)" = Darwin ] && [ -z "${CURSOR_BUDGET_NO_NOTIFY:-}" ]; then
+  python3 "$DEST/cbudget.py" notify-test || status=1
+fi
 exit "$status"

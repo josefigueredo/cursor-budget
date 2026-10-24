@@ -15,11 +15,12 @@ def stop(model="claude-sonnet-5-5-high", conv="c1", **tokens):
 class TestCost(unittest.TestCase):
     table = budget.prices(Path("/nonexistent"))
 
-    def test_reproduces_the_oct_21_opus_bill_within_five_percent(self):
-        # Cursor CSV, Oct 21: 29 claude-opus-5-5-high events billed $70.26
-        event = {"model": "claude-opus-5-5-high", "input_tokens": 91_471_000, "cache_read_tokens": 87_470_000,
-                 "cache_write_tokens": 4_000_000, "output_tokens": 611_000}
-        self.assertAlmostEqual(budget.cost(event, self.table), 70.26, delta=70.26 * 0.05)
+    def test_opus_turn_follows_the_formula(self):
+        # made-up turn: 5M uncached x $4 + 5M cache write x $4 x 1.25 + 90M cache read x $0.20 + 0.5M output x $20
+        # + the $0.25 surcharge on all 100.5M tokens = 20 + 25 + 18 + 10 + 25.125
+        event = {"model": "claude-opus-5-5-high", "input_tokens": 100_000_000, "cache_read_tokens": 90_000_000,
+                 "cache_write_tokens": 5_000_000, "output_tokens": 500_000}
+        self.assertAlmostEqual(budget.cost(event, self.table), 98.125, places=3)
 
     def test_cached_input_is_not_billed_twice(self):
         event = {"model": "gpt-5.6-terra-medium", "input_tokens": 1_000_000, "cache_read_tokens": 1_000_000}
@@ -89,11 +90,11 @@ class TestCycle(Home):
         self.assertAlmostEqual(total, 100.35, places=2)
 
     def test_amount_seed_sets_the_cycle_without_a_csv(self):
-        budget.seed_amount(157.21, home=self.home, now=lambda: NOON - 60, cycle_day=1)
+        budget.seed_amount(84.30, home=self.home, now=lambda: NOON - 60, cycle_day=1)
         self.run_stop(stop(input_tokens=1_000_000, cache_read_tokens=1_000_000))
         total, seeded = budget.cycle_total(budget.read_ledger(self.home), self.home, NOON, 1)
         self.assertTrue(seeded)
-        self.assertAlmostEqual(total, 157.56, places=2)
+        self.assertAlmostEqual(total, 84.65, places=2)
         self.assertIn("Lo que mostraba Cursor", render.report(7, home=self.home, now=NOON))
 
     def test_warns_when_the_cycle_crosses_a_share_of_the_limit(self):
@@ -313,6 +314,18 @@ class TestCli(unittest.TestCase):
             self.assertTrue(cli.install_hook("/usr/bin/python3 /app/cbudget.py hook", path))
             hooks = json.loads(path.read_text())["hooks"]
             self.assertEqual([h["command"] for h in hooks["stop"]], ["/usr/bin/python3 /app/cbudget.py hook"])
+
+    def test_notify_test_sends_one_notification_and_says_how_to_allow_them(self):
+        import contextlib, io
+        sent, out = [], io.StringIO()
+        original, cli.notify = cli.notify, sent.append
+        try:
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(cli.main(["notify-test"]), 0)
+        finally:
+            cli.notify = original
+        self.assertEqual(len(sent), 1)
+        self.assertIn("Script Editor", out.getvalue())
 
     def test_alias_is_added_once_and_replaced_when_the_folder_moves(self):
         with tempfile.TemporaryDirectory() as tmp:
