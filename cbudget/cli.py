@@ -19,6 +19,8 @@ EVENTS = ("stop", "beforeSubmitPrompt")
 
 def notify(message: str) -> None:
     """A macOS notification; a failure here must never reach Cursor."""
+    if os.environ.get("CURSOR_BUDGET_NO_NOTIFY"):
+        return
     script = f"display notification {json.dumps(message)} with title \"cursor-budget\""
     try:
         subprocess.run(["osascript", "-e", script], capture_output=True, timeout=5)

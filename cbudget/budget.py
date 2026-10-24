@@ -216,7 +216,7 @@ def on_submit(payload: dict, home: Path = HOME, now: Callable[[], float] = time.
         home.mkdir(parents=True, exist_ok=True)
         with (home / "blocks.jsonl").open("a", encoding="utf-8") as fh:
             fh.write(json.dumps({"t": round(t), "conversation_id": payload.get("conversation_id"), "model": model,
-                                 "reason": reason}) + "\n")
+                                 "reason": reason}, ensure_ascii=False) + "\n")
     except OSError:
         pass
     notify(f"Cursor bloqueado: {reason}")
@@ -329,12 +329,14 @@ def parse_value(key: str, raw: str):
         if text.lower() in ("no", "n", "false", "0", "off"):
             return False
         raise ValueError(f"{key}: esperaba sí o no, llegó {raw!r}")
+    try:
+        value = int(text) if kind == "day" else float(text.rstrip("%")) / (100 if text.endswith("%") else 1)
+    except ValueError:
+        raise ValueError(f"{key}: esperaba {'un día' if kind == 'day' else 'un número'}, llegó {raw!r}") from None
     if kind == "day":
-        value = int(text)
         if not 1 <= value <= 31:
             raise ValueError(f"{key}: el día va de 1 a 31")
         return value
-    value = float(text.rstrip("%")) / (100 if text.endswith("%") else 1)
     if value < 0 or kind == "share" and value > 1:
         raise ValueError(f"{key}: valor fuera de rango ({raw})")
     return value

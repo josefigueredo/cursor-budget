@@ -291,6 +291,13 @@ class TestLimits(Home):
         self.assertEqual(cfg["block_day"], 10.0)
         self.assertEqual(cfg["model_budgets"], {"composer-*": 15.0})
         self.assertIn("terminal", (self.home / "changes.jsonl").read_text())
+        self.assertIn("  composer-*: sin presupuesto -> $15.00", out)
+
+    def test_a_value_that_is_not_a_number_says_so_in_spanish(self):
+        with self.assertRaisesRegex(ValueError, "block_day: esperaba un número, llegó 'doce'"):
+            budget.parse_value("block_day", "doce")
+        with self.assertRaisesRegex(ValueError, "cycle_day: esperaba un día"):
+            budget.parse_value("cycle_day", "lunes")
 
     def test_interactive_edit_discards_without_confirmation(self):
         answers = iter(["3"] + [""] * 9 + ["n"])

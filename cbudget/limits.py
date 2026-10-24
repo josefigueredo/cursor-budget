@@ -150,8 +150,16 @@ def edit(home: Path = budget.HOME, ask: Callable[[str], str] = input, say: Calla
     say("\nCambios:")
     for key, value in changes.items():
         before = cfg[key]
-        say(f"  {key}: {describe(key, before) if key in budget.SCALARS else before} -> "
-            f"{describe(key, value) if key in budget.SCALARS else value}")
+        if key in budget.SCALARS:
+            say(f"  {key}: {describe(key, before)} -> {describe(key, value)}")
+        elif key == "model_budgets":
+            for pattern in [*before, *(p for p in value if p not in before)]:
+                old, new = before.get(pattern), value.get(pattern)
+                if old != new:
+                    say(f"  {pattern}: {money(float(old)) if old is not None else 'sin presupuesto'} -> "
+                        f"{money(float(new)) if new is not None else 'sin presupuesto'}")
+        else:
+            say(f"  bloqueados: {', '.join(before) or 'ninguno'} -> {', '.join(value) or 'ninguno'}")
     merged = {**cfg, **changes}
     for lvl, msg in budget.check_limits(merged, budget.known_models(budget.read_ledger(home), home)):
         say(f"  {'error' if lvl == 'error' else 'aviso'}: {msg}")
