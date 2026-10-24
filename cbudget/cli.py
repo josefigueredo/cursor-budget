@@ -53,7 +53,15 @@ def report(days: int, home: Path = budget.HOME) -> str:
     note = "cobrado según el CSV + estimado desde entonces" if seeded else "solo estimado; sin `cbudget seed`"
     lines = [f"ciclo desde {budget.cycle_start(now, cfg['cycle_day'])}: ${cycle:.2f} de ${cfg['cycle_limit']:.0f} "
              f"({cycle / cfg['cycle_limit']:.0%}), quedan ${cfg['cycle_limit'] - cycle:.2f}  [{note}]", "",
-             f"turnos: {len(entries)}  total estimado: ${sum(by_day.values()):.2f}", "", "por día:"]
+             f"turnos: {len(entries)}  total estimado: ${sum(by_day.values()):.2f}", ""]
+    ledger = budget.read_ledger(home)
+    if cfg["model_budgets"]:
+        lines.append("presupuesto por modelo (ciclo):")
+        for pattern, cap in cfg["model_budgets"].items():
+            spent = budget.model_spend(ledger, home, now, cfg["cycle_day"], pattern)
+            lines.append(f"  {pattern:20s} ${spent:7.2f} de ${float(cap):.0f}  quedan ${float(cap) - spent:.2f}")
+        lines.append("")
+    lines.append("por día:")
     lines += [f"  {d}  ${v:.2f}" for d, v in sorted(by_day.items())]
     lines += ["", "por modelo:"] + [f"  {m}  ${v:.2f}" for m, v in by_model.most_common()]
     lines += ["", "chats más caros:"] + [f"  {c}  ${v:.2f}" for c, v in by_conv.most_common(5)]

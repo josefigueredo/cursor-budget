@@ -26,6 +26,7 @@ python3 cbudget.py seed usage.csv       # toma lo cobrado este ciclo como base d
 | `cycle_day` / `cycle_limit` | 1 / $225 | día en que se reinicia el ciclo y tope del plan |
 | `cycle_warn` | 75%, 90%, 100% | avisa al cruzar esas partes del tope |
 | `notify_each_turn` | sí | después de cada turno: costo del turno, del chat y del ciclo |
+| `model_budgets` | ninguno | presupuesto del ciclo por patrón de modelo, p. ej. `{"claude-opus-*": 75}`: avisa al 80% (`model_warn`) y bloquea ese modelo al agotarlo |
 | `blocked_models` | `claude-opus-*-high`, `*-xhigh`, `*-max` | bloquea esos modelos |
 
 Para cambiarlos, escribí solo las claves que quieras en `~/.cursor/budget/config.json`. Los precios están en
@@ -53,6 +54,13 @@ El hook no puede preguntarle a Cursor cuánto llevás: suma lo que ve. `cbudget 
 este ciclo según el CSV y, a partir del último evento del CSV, el hook suma sus estimaciones. Sin `seed`, el total
 del ciclo cuenta solo desde la instalación y el aviso lo dice. Un turno que termina justo después del último evento
 del CSV puede contarse dos veces (centavos).
+
+## Presupuesto por modelo
+
+`model_budgets` en `~/.cursor/budget/config.json` asigna un tope del ciclo a cada patrón (`fnmatch`; gana el primero
+que coincide, en el orden escrito). Lo gastado sale de `seed` (por modelo) más las estimaciones posteriores. Las filas
+del CSV que Auto derivó (`grok-4.7-high (Auto Balanced)`) cuentan para `auto*`, porque el hook solo ve `auto-smart`.
+`cbudget report` muestra cuánto le queda a cada uno.
 
 ## Calibrar
 

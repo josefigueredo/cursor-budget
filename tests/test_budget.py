@@ -104,6 +104,42 @@ class TestCycle(Home):
         self.assertEqual(self.notes, [])
 
 
+class TestModelBudget(Home):
+    def setUp(self):
+        super().setUp()
+        (self.home / "config.json").write_text(json.dumps(
+            {"blocked_models": [], "block_day": 1000, "model_budgets": {"claude-opus-*": 80, "auto*": 50}}), encoding="utf-8")
+        rows = [{"Model": "claude-opus-5-5-high", "Cost": "60.00", "Date": "2026-10-21T12:00:00.000Z"},
+                {"Model": "grok-4.7-high (Auto Balanced)", "Cost": "49.00", "Date": "2026-10-22T12:00:00.000Z"}]
+        budget.seed(rows, home=self.home, now=lambda: NOON, cycle_day=1)
+
+    def opus_turn(self):  # ~$10.6 of Opus after the CSV
+        self.run_stop(stop(model="claude-opus-5-5-medium", conv="x", input_tokens=2_500_000))
+
+    def test_a_model_under_its_budget_passes(self):
+        self.assertEqual(self.run_submit({"model": "claude-opus-5-5-medium", "conversation_id": "n"}), {})
+
+    def test_warns_when_a_model_crosses_its_warn_share(self):
+        self.opus_turn()
+        self.assertTrue(any("claude-opus-*" in n and "80" in n for n in self.notes))
+
+    def test_blocks_a_model_once_its_budget_is_spent(self):
+        self.opus_turn()
+        self.opus_turn()  # 60 + 21.2 > 80
+        answer = self.run_submit({"model": "claude-opus-5-5-low", "conversation_id": "n"})
+        self.assertIn("agotó su presupuesto", answer["user_message"])
+
+    def test_auto_routed_csv_rows_count_against_auto(self):
+        self.run_stop(stop(model="auto-smart", conv="y", input_tokens=1_000_000))  # ~$2.25
+        answer = self.run_submit({"model": "auto-smart", "conversation_id": "n"})
+        self.assertIn("auto*", answer["user_message"])
+
+    def test_other_models_are_not_limited(self):
+        self.opus_turn()
+        self.opus_turn()
+        self.assertEqual(self.run_submit({"model": "claude-sonnet-5-5-high", "conversation_id": "n"}), {})
+
+
 class TestSubmit(Home):
     def test_lets_a_cheap_conversation_through(self):
         self.run_stop(stop(input_tokens=10_000))

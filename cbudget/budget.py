@@ -26,6 +26,8 @@ DEFAULTS = {
     "cycle_limit": 225.0,
     "cycle_warn": [0.75, 0.9, 1.0],
     "notify_each_turn": True,
+    "model_budgets": {},
+    "model_warn": 0.8,
 }
 
 
@@ -110,6 +112,23 @@ def cycle_total(entries: list, home: Path, t: float, cycle_day: int) -> tuple:
     return round(billed + estimated, 4), seeded
 
 
+def budget_for(model: str, budgets: dict) -> Optional[str]:
+    """The first pattern in model_budgets that matches the model, in the order written in config.json."""
+    return next((pattern for pattern in budgets if fnmatch.fnmatch(model, pattern)), None)
+
+
+def model_spend(entries: list, home: Path, t: float, cycle_day: int, pattern: str) -> float:
+    """Spend this cycle on the models a pattern matches: billed per the seeded CSV plus estimates after it."""
+    start = cycle_start(t, cycle_day)
+    base = load_json(home / "baseline.json", {})
+    seeded = base.get("cycle_start") == start
+    until = float(base.get("until", 0)) if seeded else 0.0
+    billed = sum(v for m, v in (base.get("by_model") or {}).items() if fnmatch.fnmatch(m, pattern)) if seeded else 0
+    estimated = sum(e["usd"] for e in entries if e["t"] > until and day(e["t"]) >= start
+                    and fnmatch.fnmatch(e.get("model") or "", pattern))
+    return round(billed + estimated, 4)
+
+
 def crossed(before: float, after: float, limit: float) -> bool:
     return before < limit <= after
 
@@ -139,6 +158,14 @@ def on_stop(payload: dict, home: Path = HOME, now: Callable[[], float] = time.ti
     else:
         if cfg["notify_each_turn"]:
             notify(f"turno ~${usd:.2f} · chat ~${conv_after:.2f} · ciclo ~${cycle_after:.2f} de ${limit:.0f}{since}")
+    pattern = budget_for(payload.get("model") or "", cfg["model_budgets"])
+    if pattern:
+        cap = float(cfg["model_budgets"][pattern])
+        spent = model_spend(entries + [entry], home, t, cfg["cycle_day"], pattern)
+        for share in (1.0, cfg["model_warn"]):
+            if crossed(spent - usd, spent, cap * share):
+                notify(f"Cursor: {pattern} ya usó ~${spent:.2f} de sus ${cap:.0f} del ciclo ({spent / cap:.0%}).")
+                break
     for limit_key, before, after, what in (
             ("block_conversation", conv_before, conv_after, "este chat"),
             ("warn_conversation", conv_before, conv_after, "este chat"),
@@ -155,6 +182,26 @@ def allowed_until(home: Path = HOME) -> float:
     return float(load_json(home / "allow.json", {}).get("until", 0))
 
 
+def block_reason(model: str, conversation: Optional[str], cfg: dict, home: Path, t: float) -> Optional[str]:
+    """The first rule that stops this prompt, or None."""
+    if any(fnmatch.fnmatch(model, pattern) for pattern in cfg["blocked_models"]):
+        return f"el modelo {model} está bloqueado; elegí otro o corré `cbudget allow`"
+    entries = read_ledger(home)
+    pattern = budget_for(model, cfg["model_budgets"])
+    if pattern:
+        cap = float(cfg["model_budgets"][pattern])
+        spent = model_spend(entries, home, t, cfg["cycle_day"], pattern)
+        if spent >= cap:
+            return (f"{model} agotó su presupuesto del ciclo ({pattern}: ~${spent:.2f} de ${cap:.0f}); "
+                    f"elegí otro o corré `cbudget allow`")
+    conv, daily = totals(entries, conversation, day(t))
+    if conv >= cfg["block_conversation"]:
+        return f"este chat ya costó ~${conv:.2f}; abrí un chat nuevo"
+    if daily >= cfg["block_day"]:
+        return f"hoy ya van ~${daily:.2f}; corré `cbudget allow` si de verdad hace falta"
+    return None
+
+
 def on_submit(payload: dict, home: Path = HOME, now: Callable[[], float] = time.time,
               notify: Callable[[str], None] = lambda msg: None) -> dict:
     """Block the prompt when the model is on the blocked list or a block limit is spent, unless `allow` is active."""
@@ -162,14 +209,7 @@ def on_submit(payload: dict, home: Path = HOME, now: Callable[[], float] = time.
     if allowed_until(home) > t:
         return {}
     model = payload.get("model") or ""
-    conv, daily = totals(read_ledger(home), payload.get("conversation_id"), day(t))
-    reason = None
-    if any(fnmatch.fnmatch(model, pattern) for pattern in cfg["blocked_models"]):
-        reason = f"el modelo {model} está bloqueado; elegí otro o corré `cbudget allow`"
-    elif conv >= cfg["block_conversation"]:
-        reason = f"este chat ya costó ~${conv:.2f}; abrí un chat nuevo"
-    elif daily >= cfg["block_day"]:
-        reason = f"hoy ya van ~${daily:.2f}; corré `cbudget allow` si de verdad hace falta"
+    reason = block_reason(model, payload.get("conversation_id"), cfg, home, t)
     if not reason:
         return {}
     try:  # evidence that a block fired, also where the user_message is not shown
@@ -222,14 +262,17 @@ def seed(rows, home: Path = HOME, now: Callable[[], float] = time.time, cycle_da
     """Store what Cursor billed this cycle according to its usage CSV, as the base for cycle_total."""
     t = now()
     start = cycle_start(t, cycle_day or config(home)["cycle_day"])
-    billed, until = 0.0, 0.0
+    billed, until, by_model = 0.0, 0.0, {}
     for row in rows:
         stamp = datetime.datetime.fromisoformat((row.get("Date") or "").replace("Z", "+00:00")).timestamp()
         if day(stamp) < start:
             continue
-        billed += csv_event(row)[1]
+        label, usd, _ = csv_event(row)
+        model = "auto" if "(Auto" in label else label  # the hook only ever sees auto-<mode> for these
+        billed += usd
+        by_model[model] = round(by_model.get(model, 0.0) + usd, 4)
         until = max(until, stamp)
-    base = {"cycle_start": start, "billed": round(billed, 2), "until": until}
+    base = {"cycle_start": start, "billed": round(billed, 2), "until": until, "by_model": by_model}
     home.mkdir(parents=True, exist_ok=True)
     (home / "baseline.json").write_text(json.dumps(base), encoding="utf-8")
     return base
