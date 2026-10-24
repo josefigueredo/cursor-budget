@@ -7,12 +7,27 @@ Dos hooks globales de Cursor que cuidan el gasto:
 - **`beforeSubmitPrompt`**: bloquea el prompt antes de que llegue al modelo, con costo cero, si el modelo está en la
   lista de bloqueados o si el chat o el día ya gastaron su límite de bloqueo.
 
+## Instalar
+
 ```bash
-python3 cbudget.py install-hook      # lo suma a ~/.cursor/hooks.json sin tocar los demás (deja un .bak)
-python3 cbudget.py report --days 7   # ciclo, presupuestos y gasto por día, modelo y chat (en color; --color never o NO_COLOR para texto plano)
-python3 cbudget.py allow --minutes 30  # levanta los bloqueos un rato
-python3 cbudget.py calibrate usage.csv  # cobrado contra estimado por modelo, desde el CSV del dashboard
-python3 cbudget.py seed usage.csv       # toma lo cobrado este ciclo como base del total del ciclo
+./install.sh
+```
+
+Copia el programa a `~/.cursor/budget/app` (su propia carpeta, junto al registro y la configuración), apunta los
+hooks de Cursor a esa copia y agrega `alias cbudget=...` a `~/.zshrc` (o `~/.bashrc`). Así los hooks siguen andando
+aunque este repo se mueva o cambie de rama. Volver a correrlo actualiza la copia sin tocar `config.json`,
+`ledger.jsonl` ni `baseline.json`. El hook y el alias usan el `python3` con el que se instaló, con ruta absoluta,
+porque Cursor no siempre hereda el PATH de la terminal: si actualizás Python a otra versión menor, volvé a instalar.
+
+## Comandos
+
+```bash
+cbudget install-hook         # lo suma a ~/.cursor/hooks.json sin tocar los demás (deja un .bak)
+cbudget alias                # agrega o actualiza el alias en el rc de la shell
+cbudget report --days 7      # ciclo, presupuestos y gasto por día, modelo y chat (en color; --color never o NO_COLOR para texto plano)
+cbudget allow --minutes 30   # levanta los bloqueos un rato
+cbudget calibrate usage.csv  # cobrado contra estimado por modelo, desde el CSV del dashboard
+cbudget seed usage.csv       # toma lo cobrado este ciclo como base del total del ciclo
 ```
 
 ![cbudget report](docs/report.png)

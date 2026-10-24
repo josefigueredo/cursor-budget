@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -63,16 +64,22 @@ def _ours(entry: dict) -> bool:
 
 
 def install_hook(command: str, path: Path = HOOKS) -> bool:
-    """Add `command` to stop and beforeSubmitPrompt, keeping every other hook. True when the file changed."""
+    """Add `command` to stop and beforeSubmitPrompt, keeping every other hook. An older cbudget entry, from another
+    install folder, is pointed at `command` instead of duplicated. True when the file changed."""
     data = budget.load_json(path, {}) or {"version": 1}
     data.setdefault("version", 1)
     hooks = data.setdefault("hooks", {})
     changed = False
     for event in EVENTS:
         entries = hooks.setdefault(event, [])
-        if not any(_ours(e) for e in entries):
+        ours = [e for e in entries if _ours(e)]
+        if not ours:
             entries.append({"command": command, "timeout": 10})
             changed = True
+        for entry in ours:
+            if entry.get("command") != command:
+                entry["command"] = command
+                changed = True
     if changed:
         if path.exists():
             path.with_name(path.name + f".bak-{time.strftime('%Y-%m-%d-%H%M%S')}").write_text(
@@ -80,6 +87,25 @@ def install_hook(command: str, path: Path = HOOKS) -> bool:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return changed
+
+
+ALIAS_MARK = "# cursor-budget"
+
+
+def rc_file() -> Path:
+    shell = Path(os.environ.get("SHELL", "zsh")).name
+    return Path.home() / (".bashrc" if shell == "bash" else ".zshrc")
+
+
+def install_alias(entry: Path, rc: Path) -> bool:
+    """Write `alias cbudget=...` into the shell rc, replacing an older cbudget alias. True when the file changed."""
+    line = f"alias cbudget={shlex.quote(f'{sys.executable} {entry}')}  {ALIAS_MARK}"
+    lines = rc.read_text(encoding="utf-8").splitlines() if rc.exists() else []
+    kept = [ln for ln in lines if not ln.rstrip().endswith(ALIAS_MARK)]
+    if line in lines and len(lines) - len(kept) == 1:
+        return False
+    rc.write_text("\n".join(kept + [line]) + "\n", encoding="utf-8")
+    return True
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -96,6 +122,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     sed = sub.add_parser("seed", help="take this cycle's billed spend from Cursor's usage CSV")
     sed.add_argument("csv", type=Path)
     sub.add_parser("install-hook", help="add cbudget to ~/.cursor/hooks.json")
+    sub.add_parser("alias", help="add `alias cbudget=...` to ~/.zshrc (or ~/.bashrc)")
     args = parser.parse_args(argv)
 
     if args.cmd == "hook":
@@ -119,6 +146,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"bloqueos levantados hasta las {time.strftime('%H:%M', time.localtime(until))}")
         return 0
     entry = Path(__file__).resolve().parent.parent / "cbudget.py"
+    if args.cmd == "alias":
+        rc = rc_file()
+        print(f"alias agregado en {rc}; abrí otra terminal o corré: source {rc}" if install_alias(entry, rc)
+              else f"el alias ya estaba en {rc}")
+        return 0
     command = f"{shlex.quote(sys.executable)} {shlex.quote(str(entry))} hook"
     print("hook instalado" if install_hook(command) else "el hook ya estaba instalado")
     return 0

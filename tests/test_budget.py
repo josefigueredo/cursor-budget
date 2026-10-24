@@ -240,6 +240,26 @@ class TestCli(unittest.TestCase):
     def test_a_broken_payload_fails_open(self):
         self.assertEqual(cli.hook("not json"), {})
 
+    def test_install_moves_an_older_entry_to_the_new_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "hooks.json"
+            cli.install_hook("/usr/bin/python3 /repo/cbudget.py hook", path)
+            self.assertTrue(cli.install_hook("/usr/bin/python3 /app/cbudget.py hook", path))
+            hooks = json.loads(path.read_text())["hooks"]
+            self.assertEqual([h["command"] for h in hooks["stop"]], ["/usr/bin/python3 /app/cbudget.py hook"])
+
+    def test_alias_is_added_once_and_replaced_when_the_folder_moves(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rc = Path(tmp) / ".zshrc"
+            rc.write_text("export A=1\n", encoding="utf-8")
+            self.assertTrue(cli.install_alias(Path("/repo/cbudget.py"), rc))
+            self.assertFalse(cli.install_alias(Path("/repo/cbudget.py"), rc))
+            self.assertTrue(cli.install_alias(Path("/app/cbudget.py"), rc))
+            lines = rc.read_text().splitlines()
+            self.assertEqual(lines[0], "export A=1")
+            self.assertEqual(len([ln for ln in lines if "cursor-budget" in ln]), 1)
+            self.assertIn("/app/cbudget.py", lines[-1])
+
     def test_install_keeps_other_hooks_and_is_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "hooks.json"
