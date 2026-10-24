@@ -1,0 +1,49 @@
+# cursor-budget
+
+Dos hooks globales de Cursor que cuidan el gasto:
+
+- **`stop`**: estima el costo de cada turno, lo anota en `~/.cursor/budget/ledger.jsonl` y avisa con una
+  notificación de macOS la primera vez que un chat o el día pasa un límite.
+- **`beforeSubmitPrompt`**: bloquea el prompt antes de que llegue al modelo, con costo cero, si el modelo está en la
+  lista de bloqueados o si el chat o el día ya gastaron su límite de bloqueo.
+
+```bash
+python3 cbudget.py install-hook      # lo suma a ~/.cursor/hooks.json sin tocar los demás (deja un .bak)
+python3 cbudget.py report --days 7   # gasto estimado por día, modelo y chat
+python3 cbudget.py allow --minutes 30  # levanta los bloqueos un rato
+```
+
+## Límites por defecto
+
+| Clave | Valor | Qué hace |
+|---|---|---|
+| `warn_conversation` | $2 | avisa: "abrí un chat nuevo" |
+| `block_conversation` | $5 | bloquea los prompts siguientes de ese chat |
+| `warn_day` | $8 | avisa |
+| `block_day` | $15 | bloquea hasta mañana o hasta `allow` |
+| `blocked_models` | `claude-opus-*-high`, `*-xhigh`, `*-max` | bloquea esos modelos |
+
+Para cambiarlos, escribí solo las claves que quieras en `~/.cursor/budget/config.json`. Los precios están en
+`cbudget/prices.json`; una copia en `~/.cursor/budget/prices.json` tiene prioridad.
+
+## Lo medido (2026-10-24, cursor-agent 2026.10.22)
+
+- El payload de `stop` trae `model`, `conversation_id`, `input_tokens`, `output_tokens`, `cache_read_tokens` y
+  `cache_write_tokens`, por turno, no acumulado. `input_tokens` incluye los tokens de caché: un segundo turno
+  dio 22934 de entrada con 19807 de lectura de caché.
+- `beforeSubmitPrompt` trae `model` y `conversation_id`. Responder `{"continue": false}` **bloquea en `cursor-agent`**:
+  no hubo respuesta ni evento `stop`. El `user_message` no se ve en la terminal, por eso además sale una notificación.
+  **En el IDE no está probado**: en el foro de Cursor hay reportes de que el bloqueo no anda en algunas versiones.
+- La fórmula (precio de API, más 1.25x en la escritura de caché, más $0.25 por millón en modelos de terceros)
+  reproduce la factura del 21 de octubre ($70.26 de Opus) con un error de ±5%. Hay un test que lo controla.
+  Un turno de Gemini Flash dio $0.017 estimado, contra $0.02 en el CSV.
+
+## Límites conocidos
+
+- El registro empieza a contar el día que lo instalás: no conoce el gasto anterior. El tope real del mes lo pone Cursor.
+- Si el hook falla, deja pasar el prompt (falla abierto) para no romper Cursor.
+- Los precios marcados `estimate` en `prices.json` no están verificados.
+
+## Desarrollar
+
+`python3 -m unittest discover -s tests`, también con `/usr/bin/python3` (3.9). Solo biblioteca estándar. Conventional commits.

@@ -1,0 +1,110 @@
+"""cbudget: hook, report, allow, install-hook."""
+from __future__ import annotations
+
+import argparse
+import collections
+import json
+import shlex
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Optional, Sequence
+
+from . import budget
+
+HOOKS = Path.home() / ".cursor" / "hooks.json"
+EVENTS = ("stop", "beforeSubmitPrompt")
+
+
+def notify(message: str) -> None:
+    """A macOS notification; a failure here must never reach Cursor."""
+    script = f"display notification {json.dumps(message)} with title \"cursor-budget\""
+    try:
+        subprocess.run(["osascript", "-e", script], capture_output=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+def hook(raw: str) -> dict:
+    """Fail open: a broken budget hook must not stop Cursor, so any error answers {}."""
+    try:
+        payload = json.loads(raw or "{}")
+        event = payload.get("hook_event_name")
+        if event == "stop":
+            return budget.on_stop(payload, notify=notify)
+        if event == "beforeSubmitPrompt":
+            return budget.on_submit(payload, notify=notify)
+    except Exception:  # noqa: BLE001 - see docstring
+        pass
+    return {}
+
+
+def report(days: int, home: Path = budget.HOME) -> str:
+    since = budget.day(time.time() - (days - 1) * 86400)
+    entries = [e for e in budget.read_ledger(home) if budget.day(e["t"]) >= since]
+    by_day, by_model, by_conv = collections.Counter(), collections.Counter(), collections.Counter()
+    for e in entries:
+        by_day[budget.day(e["t"])] += e["usd"]
+        by_model[e.get("model")] += e["usd"]
+        by_conv[e.get("conversation_id")] += e["usd"]
+    lines = [f"turnos: {len(entries)}  total estimado: ${sum(by_day.values()):.2f}", "", "por día:"]
+    lines += [f"  {d}  ${v:.2f}" for d, v in sorted(by_day.items())]
+    lines += ["", "por modelo:"] + [f"  {m}  ${v:.2f}" for m, v in by_model.most_common()]
+    lines += ["", "chats más caros:"] + [f"  {c}  ${v:.2f}" for c, v in by_conv.most_common(5)]
+    return "\n".join(lines)
+
+
+def _ours(entry: dict) -> bool:
+    try:
+        argv = shlex.split(str(entry.get("command", "")))
+    except ValueError:
+        return False
+    return len(argv) >= 2 and argv[-1] == "hook" and any(Path(a).name == "cbudget.py" for a in argv[:-1])
+
+
+def install_hook(command: str, path: Path = HOOKS) -> bool:
+    """Add `command` to stop and beforeSubmitPrompt, keeping every other hook. True when the file changed."""
+    data = budget.load_json(path, {}) or {"version": 1}
+    data.setdefault("version", 1)
+    hooks = data.setdefault("hooks", {})
+    changed = False
+    for event in EVENTS:
+        entries = hooks.setdefault(event, [])
+        if not any(_ours(e) for e in entries):
+            entries.append({"command": command, "timeout": 10})
+            changed = True
+    if changed:
+        if path.exists():
+            path.with_name(path.name + f".bak-{time.strftime('%Y-%m-%d-%H%M%S')}").write_text(
+                path.read_text(encoding="utf-8"), encoding="utf-8")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return changed
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = argparse.ArgumentParser(prog="cbudget", description="Cursor spend: ledger, warnings and blocks.")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("hook", help="Cursor hook entry point (stdin: the hook payload)")
+    rep = sub.add_parser("report", help="estimated spend from the ledger")
+    rep.add_argument("--days", type=int, default=7)
+    alw = sub.add_parser("allow", help="lift blocks for a while")
+    alw.add_argument("--minutes", type=int, default=30)
+    sub.add_parser("install-hook", help="add cbudget to ~/.cursor/hooks.json")
+    args = parser.parse_args(argv)
+
+    if args.cmd == "hook":
+        print(json.dumps(hook(sys.stdin.read())))
+        return 0
+    if args.cmd == "report":
+        print(report(args.days))
+        return 0
+    if args.cmd == "allow":
+        until = budget.allow(args.minutes)
+        print(f"bloqueos levantados hasta las {time.strftime('%H:%M', time.localtime(until))}")
+        return 0
+    entry = Path(__file__).resolve().parent.parent / "cbudget.py"
+    command = f"{shlex.quote(sys.executable)} {shlex.quote(str(entry))} hook"
+    print("hook instalado" if install_hook(command) else "el hook ya estaba instalado")
+    return 0
