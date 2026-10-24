@@ -9,6 +9,17 @@ Dos hooks globales de Cursor que cuidan el gasto:
 
 ## Instalar
 
+Una línea, con [gh](https://cli.github.com) con la sesión iniciada (`brew install gh && gh auth login`):
+
+```bash
+gh api repos/josefigueredo/cursor-budget/contents/bootstrap.sh -H "Accept: application/vnd.github.raw" | bash
+```
+
+El repo es interno: un `curl` sin autenticación recibe 404, por eso la línea usa `gh`. `bootstrap.sh` clona el repo
+en una carpeta temporal, corre `install.sh` y la borra. Para actualizar, corré la misma línea.
+
+Con el repo ya clonado:
+
 ```bash
 ./install.sh
 ```
