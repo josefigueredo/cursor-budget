@@ -30,6 +30,11 @@ class TestCost(unittest.TestCase):
         event = {"model": "cursor-grok-4.6-high", "input_tokens": 1_000_000}
         self.assertAlmostEqual(budget.cost(event, self.table), 2.0, places=4)
 
+    def test_auto_is_priced_like_a_mid_tier_model_not_as_unknown(self):
+        # the stop payload names the Auto mode (auto-smart), never the model it routed to
+        event = {"model": "auto-smart", "input_tokens": 1_000_000}
+        self.assertAlmostEqual(budget.cost(event, self.table), 2.25, places=4)
+
     def test_unknown_model_is_priced_high(self):
         event = {"model": "brand-new-model", "output_tokens": 1_000_000}
         self.assertAlmostEqual(budget.cost(event, self.table), 20.25, places=4)

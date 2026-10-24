@@ -40,6 +40,8 @@ Para cambiarlos, escribí solo las claves que quieras en `~/.cursor/budget/confi
 
 ## Límites conocidos
 
+- **Auto**: el payload dice `auto-smart` (el modo), nunca el modelo al que Auto derivó. Desde agosto de 2026 Auto cobra
+  el precio de lista de ese modelo, así que el costo de Auto es una estimación a precio de Sonnet 5.5. Auto no se bloquea.
 - El registro empieza a contar el día que lo instalás: no conoce el gasto anterior. El tope real del mes lo pone Cursor.
 - Si el hook falla, deja pasar el prompt (falla abierto) para no romper Cursor.
 - Los precios marcados `estimate` en `prices.json` no están verificados.
