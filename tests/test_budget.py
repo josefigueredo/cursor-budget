@@ -212,15 +212,24 @@ class TestReport(Home):
         (self.home / "config.json").write_text(json.dumps({"model_budgets": {"claude-*": 10}}), encoding="utf-8")
         self.run_stop(stop(input_tokens=1_000_000))
         text = render.report(7, home=self.home, color=False, now=NOON)
-        for heading in ("CURSOR BUDGET", "CICLO", "PRESUPUESTO POR MODELO", "ÚLTIMOS 7 DÍAS", "Chats más caros"):
+        for heading in ("Uso de Cursor", "Uso del ciclo", "Presupuesto por modelo", "Uso por día", "Últimos turnos"):
             self.assertIn(heading, text)
         self.assertNotIn("\033[", text)
-        self.assertIn("quedan 8 días", text)
+        self.assertIn("Quedan 8 días", text)
+        self.assertIn("1.0M", text)
+
+    def test_every_card_line_has_the_same_width(self):
+        (self.home / "config.json").write_text(json.dumps({"model_budgets": {"claude-*": 10}}), encoding="utf-8")
+        self.run_stop(stop(input_tokens=1_000_000))
+        for columns in (80, 100, 140):
+            text = render.report(7, home=self.home, color=True, now=NOON, columns=columns)
+            boxed = [render.width(line) for line in text.splitlines() if "│" in line and line.count("│") == 2]
+            self.assertEqual(len(set(boxed)), 1, columns)
 
     def test_color_report_paints_a_spent_budget_red(self):
         (self.home / "config.json").write_text(json.dumps({"model_budgets": {"claude-*": 1}}), encoding="utf-8")
         self.run_stop(stop(input_tokens=1_000_000))
-        self.assertIn("\033[31m", render.report(7, home=self.home, color=True, now=NOON))
+        self.assertIn("38;2;232;96;80", render.report(7, home=self.home, color=True, now=NOON))
 
     def test_next_cycle_handles_short_months(self):
         self.assertEqual(render.next_cycle("2026-10-01", 1).isoformat(), "2026-11-01")

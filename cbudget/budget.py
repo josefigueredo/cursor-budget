@@ -262,7 +262,7 @@ def seed(rows, home: Path = HOME, now: Callable[[], float] = time.time, cycle_da
     """Store what Cursor billed this cycle according to its usage CSV, as the base for cycle_total."""
     t = now()
     start = cycle_start(t, cycle_day or config(home)["cycle_day"])
-    billed, until, by_model = 0.0, 0.0, {}
+    billed, until, by_model, by_day = 0.0, 0.0, {}, {}
     for row in rows:
         stamp = datetime.datetime.fromisoformat((row.get("Date") or "").replace("Z", "+00:00")).timestamp()
         if day(stamp) < start:
@@ -271,8 +271,25 @@ def seed(rows, home: Path = HOME, now: Callable[[], float] = time.time, cycle_da
         model = "auto" if "(Auto" in label else label  # the hook only ever sees auto-<mode> for these
         billed += usd
         by_model[model] = round(by_model.get(model, 0.0) + usd, 4)
+        cell = by_day.setdefault(day(stamp), {})
+        cell[model] = round(cell.get(model, 0.0) + usd, 4)
         until = max(until, stamp)
-    base = {"cycle_start": start, "billed": round(billed, 2), "until": until, "by_model": by_model}
+    base = {"cycle_start": start, "billed": round(billed, 2), "until": until, "by_model": by_model, "by_day": by_day}
     home.mkdir(parents=True, exist_ok=True)
     (home / "baseline.json").write_text(json.dumps(base), encoding="utf-8")
     return base
+
+
+def daily_by_model(entries: list, home: Path, t: float, cycle_day: int) -> dict:
+    """{day: {model: usd}} for this cycle: the seeded CSV's days plus the hook's estimates after it."""
+    start = cycle_start(t, cycle_day)
+    base = load_json(home / "baseline.json", {})
+    seeded = base.get("cycle_start") == start
+    days = {d: dict(models) for d, models in (base.get("by_day") or {}).items()} if seeded else {}
+    until = float(base.get("until", 0)) if seeded else 0.0
+    for e in entries:
+        if e["t"] > until and day(e["t"]) >= start:
+            cell = days.setdefault(day(e["t"]), {})
+            model = e.get("model") or "?"
+            cell[model] = round(cell.get(model, 0.0) + e["usd"], 4)
+    return days

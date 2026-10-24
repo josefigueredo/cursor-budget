@@ -15,6 +15,10 @@ python3 cbudget.py calibrate usage.csv  # cobrado contra estimado por modelo, de
 python3 cbudget.py seed usage.csv       # toma lo cobrado este ciclo como base del total del ciclo
 ```
 
+![cbudget report](docs/report.png)
+
+Captura de la salida real de `cbudget report` en color, pasada a HTML (2026-10-24).
+
 ## Límites por defecto
 
 | Clave | Valor | Qué hace |
