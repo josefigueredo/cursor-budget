@@ -23,6 +23,12 @@ porque Cursor no siempre hereda el PATH de la terminal: si actualizás Python a 
 
 ```bash
 cbudget install-hook         # lo suma a ~/.cursor/hooks.json sin tocar los demás (deja un .bak)
+cbudget limits                      # límites vigentes, gasto contra presupuesto por modelo y chequeo de coherencia
+cbudget limits check                # solo los problemas (exit 1 si hay un error)
+cbudget limits edit                 # editor interactivo, solo en terminal
+cbudget limits set block_day 12     # cambia un límite general (también 80%, si/no)
+cbudget limits model 'claude-sonnet-*' 70   # presupuesto del ciclo para un modelo (--remove lo quita)
+cbudget limits block 'claude-opus-*'        # bloquea un patrón (unblock lo libera)
 cbudget alias                # agrega o actualiza el alias en el rc de la shell
 cbudget report --days 7      # ciclo, presupuestos y gasto por día, modelo y chat (en color; --color never o NO_COLOR para texto plano)
 cbudget allow --minutes 30   # levanta los bloqueos un rato
@@ -73,6 +79,14 @@ El hook no puede preguntarle a Cursor cuánto llevás: suma lo que ve. `cbudget 
 este ciclo según el CSV y, a partir del último evento del CSV, el hook suma sus estimaciones. Sin `seed`, el total
 del ciclo cuenta solo desde la instalación y el aviso lo dice. Un turno que termina justo después del último evento
 del CSV puede contarse dos veces (centavos).
+
+## Terminal y chat: un solo CLI
+
+En la terminal, `cbudget limits edit` pregunta límite por límite (Enter deja el actual), muestra los cambios y el
+chequeo, y guarda solo si confirmás. Desde un chat de Cursor, Claude Code o Codex, la skill `cursor-budget`
+(`SKILL.md`, la instala `install.sh`) le dice al agente qué subcomando no interactivo correr. La skill solo cambia un
+límite si se lo pediste en ese chat; igual, cada cambio queda en `~/.cursor/budget/changes.jsonl` con quién lo hizo
+(`terminal` o `agente`) y sale una notificación, porque un agente podría subirse su propio presupuesto.
 
 ## Presupuesto por modelo
 

@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 from typing import Optional, Sequence
 
-from . import budget, render
+from . import budget, limits, render
 
 HOOKS = Path.home() / ".cursor" / "hooks.json"
 EVENTS = ("stop", "beforeSubmitPrompt")
@@ -108,6 +108,40 @@ def install_alias(entry: Path, rc: Path) -> bool:
     return True
 
 
+def limits_command(args) -> int:
+    interactive = sys.stdin.isatty() and sys.stdout.isatty()
+    actor = args.by or ("terminal" if interactive else "agente")
+    color = {"always": True, "never": False}.get(args.color, render.color_enabled())
+    try:
+        if args.action is None:
+            print(limits.show(color=color))
+        elif args.action == "check":
+            problems = budget.check_limits(budget.config(), budget.known_models(budget.read_ledger()))
+            for lvl, msg in problems:
+                print(f"{lvl}: {msg}")
+            print("ok" if not problems else f"{len(problems)} problema(s)")
+            return 1 if any(lvl == "error" for lvl, _ in problems) else 0
+        elif args.action == "edit":
+            if not interactive:
+                print("`limits edit` necesita una terminal; desde un agente usá `limits set`, `limits model`, "
+                      "`limits block` o `limits unblock`", file=sys.stderr)
+                return 2
+            limits.edit(notify=notify)
+        elif args.action == "set":
+            print(limits.set_scalar(args.key, args.value, actor=actor, notify=notify))
+        elif args.action == "model":
+            if args.remove == (args.usd is not None):
+                print("indicá un monto o --remove", file=sys.stderr)
+                return 2
+            print(limits.set_model(args.pattern, None if args.remove else args.usd, actor=actor, notify=notify))
+        else:
+            print(limits.set_blocked(args.pattern, args.action == "block", actor=actor, notify=notify))
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    return 0
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="cbudget", description="Cursor spend: ledger, warnings and blocks.")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -121,6 +155,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     cal.add_argument("csv", type=Path)
     sed = sub.add_parser("seed", help="take this cycle's billed spend from Cursor's usage CSV")
     sed.add_argument("csv", type=Path)
+    lim = sub.add_parser("limits", help="show, check and change the limits")
+    lim.add_argument("--color", choices=("auto", "always", "never"), default="auto")
+    lim.add_argument("--by", default=None, help="who changes them, for changes.jsonl (default: terminal or agente)")
+    lsub = lim.add_subparsers(dest="action")
+    lsub.add_parser("check", help="only the problems; exit 1 when there is an error")
+    lsub.add_parser("edit", help="interactive editor (terminal only)")
+    lset = lsub.add_parser("set", help="change a general limit")
+    lset.add_argument("key", choices=list(budget.SCALARS))
+    lset.add_argument("value")
+    lmod = lsub.add_parser("model", help="set or remove a model's budget for the cycle")
+    lmod.add_argument("pattern")
+    lmod.add_argument("usd", nargs="?")
+    lmod.add_argument("--remove", action="store_true")
+    for name in ("block", "unblock"):
+        lsub.add_parser(name, help=f"{name} a model pattern").add_argument("pattern")
     sub.add_parser("install-hook", help="add cbudget to ~/.cursor/hooks.json")
     sub.add_parser("alias", help="add `alias cbudget=...` to ~/.zshrc (or ~/.bashrc)")
     args = parser.parse_args(argv)
@@ -145,6 +194,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         until = budget.allow(args.minutes)
         print(f"bloqueos levantados hasta las {time.strftime('%H:%M', time.localtime(until))}")
         return 0
+    if args.cmd == "limits":
+        return limits_command(args)
     entry = Path(__file__).resolve().parent.parent / "cbudget.py"
     if args.cmd == "alias":
         rc = rc_file()

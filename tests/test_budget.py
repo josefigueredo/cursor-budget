@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from cbudget import budget, cli, render
+from cbudget import budget, cli, limits, render
 
 NOON = 1792850000.0  # 2026-10-24 10:53 -03, a fixed clock
 
@@ -234,6 +234,64 @@ class TestReport(Home):
     def test_next_cycle_handles_short_months(self):
         self.assertEqual(render.next_cycle("2026-10-01", 1).isoformat(), "2026-11-01")
         self.assertEqual(render.next_cycle("2027-01-31", 31).isoformat(), "2027-02-28")
+
+
+class TestLimits(Home):
+    def test_check_flags_a_warning_above_its_block(self):
+        cfg = {**budget.DEFAULTS, "warn_day": 20}
+        self.assertEqual(budget.check_limits(cfg, [])[0][0], "error")
+
+    def test_check_flags_budgets_above_the_cycle_and_shadowed_patterns(self):
+        cfg = {**budget.DEFAULTS, "cycle_limit": 100, "model_budgets": {"claude-*": 80, "claude-opus-*": 40}}
+        messages = " ".join(m for _, m in budget.check_limits(cfg, ["claude-opus-5-5-high"]))
+        self.assertIn("suman $120.00", messages)
+        self.assertIn("tapado", messages)
+
+    def test_defaults_pass_the_check(self):
+        self.assertEqual(budget.check_limits(dict(budget.DEFAULTS), []), [])
+
+    def test_set_parses_money_and_percent_and_logs_the_change(self):
+        limits.set_scalar("block_day", "$12,5", home=self.home, actor="agente", notify=self.notes.append)
+        limits.set_scalar("model_warn", "70%", home=self.home)
+        cfg = budget.config(self.home)
+        self.assertEqual((cfg["block_day"], cfg["model_warn"]), (12.5, 0.7))
+        change = json.loads((self.home / "changes.jsonl").read_text().splitlines()[0])
+        self.assertEqual((change["actor"], change["before"], change["after"]), ("agente", 15.0, 12.5))
+        self.assertIn("agente", self.notes[0])
+
+    def test_set_rejects_nonsense(self):
+        with self.assertRaises(ValueError):
+            limits.set_scalar("model_warn", "150%", home=self.home)
+        with self.assertRaises(ValueError):
+            limits.set_scalar("cycle_day", "40", home=self.home)
+
+    def test_model_budget_and_block_round_trip(self):
+        limits.set_model("composer-*", "20", home=self.home)
+        limits.set_blocked("claude-opus-*", True, home=self.home)
+        self.assertEqual(budget.config(self.home)["model_budgets"], {"composer-*": 20.0})
+        self.assertIn("claude-opus-*", budget.config(self.home)["blocked_models"])
+        limits.set_model("composer-*", None, home=self.home)
+        limits.set_blocked("claude-opus-*", False, home=self.home)
+        self.assertEqual(budget.config(self.home)["model_budgets"], {})
+
+    def test_interactive_edit_saves_only_after_confirming(self):
+        answers = iter(["", "", "", "10", "", "", "", "", "composer-*", "15", "", "", "s"])
+        out = []
+        self.assertTrue(limits.edit(home=self.home, ask=lambda _: next(answers), say=out.append))
+        cfg = budget.config(self.home)
+        self.assertEqual(cfg["block_day"], 10.0)
+        self.assertEqual(cfg["model_budgets"], {"composer-*": 15.0})
+        self.assertIn("terminal", (self.home / "changes.jsonl").read_text())
+
+    def test_interactive_edit_discards_without_confirmation(self):
+        answers = iter(["3"] + [""] * 9 + ["n"])
+        self.assertFalse(limits.edit(home=self.home, ask=lambda _: next(answers), say=lambda _: None))
+        self.assertFalse((self.home / "config.json").exists())
+
+    def test_show_lists_limits_and_the_check(self):
+        text = limits.show(home=self.home, color=False, now=NOON)
+        for heading in ("Límites de cursor-budget", "Generales", "Presupuesto por modelo", "Chequeo"):
+            self.assertIn(heading, text)
 
 
 class TestCli(unittest.TestCase):

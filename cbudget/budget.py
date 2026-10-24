@@ -293,3 +293,94 @@ def daily_by_model(entries: list, home: Path, t: float, cycle_day: int) -> dict:
             model = e.get("model") or "?"
             cell[model] = round(cell.get(model, 0.0) + e["usd"], 4)
     return days
+
+
+# Limits: one place that knows their types, so the check, `limits set` and the interactive editor agree.
+SCALARS = {
+    "warn_conversation": ("usd", "Avisa cuando un chat pasa este monto"),
+    "block_conversation": ("usd", "Bloquea un chat que llegó a este monto"),
+    "warn_day": ("usd", "Avisa cuando el día pasa este monto"),
+    "block_day": ("usd", "Bloquea el resto del día al llegar a este monto"),
+    "cycle_limit": ("usd", "Tope del plan en el ciclo"),
+    "cycle_day": ("day", "Día del mes en que se reinicia el ciclo"),
+    "model_warn": ("share", "Parte del presupuesto de un modelo que dispara el aviso"),
+    "notify_each_turn": ("bool", "Notificación después de cada turno"),
+}
+
+
+def parse_value(key: str, raw: str):
+    kind = SCALARS[key][0]
+    text = str(raw).strip().lstrip("$").replace(",", ".")
+    if kind == "bool":
+        if text.lower() in ("si", "sí", "s", "yes", "y", "true", "1", "on"):
+            return True
+        if text.lower() in ("no", "n", "false", "0", "off"):
+            return False
+        raise ValueError(f"{key}: esperaba sí o no, llegó {raw!r}")
+    if kind == "day":
+        value = int(text)
+        if not 1 <= value <= 31:
+            raise ValueError(f"{key}: el día va de 1 a 31")
+        return value
+    value = float(text.rstrip("%")) / (100 if text.endswith("%") else 1)
+    if value < 0 or kind == "share" and value > 1:
+        raise ValueError(f"{key}: valor fuera de rango ({raw})")
+    return value
+
+
+def user_config(home: Path = HOME) -> dict:
+    return load_json(home / "config.json", {})
+
+
+def save_config(changes: dict, home: Path = HOME, now: Callable[[], float] = time.time, actor: str = "cli",
+                notify: Callable[[str], None] = lambda msg: None) -> dict:
+    """Merge `changes` into config.json, log each change to changes.jsonl and notify: an agent can raise its own
+    budget, so every change must be visible to the person."""
+    current = user_config(home)
+    merged = {**current, **changes}
+    if merged == current:
+        return merged
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "config.json").write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    effective_before = {**DEFAULTS, **current}
+    with (home / "changes.jsonl").open("a", encoding="utf-8") as fh:
+        for key, value in changes.items():
+            if effective_before.get(key) != value:
+                fh.write(json.dumps({"t": round(now()), "actor": actor, "key": key,
+                                     "before": effective_before.get(key), "after": value}, ensure_ascii=False) + "\n")
+    notify(f"Límites de Cursor cambiados ({actor}): {', '.join(sorted(changes))}")
+    return merged
+
+
+def check_limits(cfg: dict, known_models: list) -> list:
+    """Problems in the effective config, as (level, message), level in error|warning."""
+    problems = []
+    unknown = sorted(set(cfg) - set(DEFAULTS))
+    if unknown:
+        problems.append(("warning", f"Claves desconocidas en config.json, se ignoran: {', '.join(unknown)}"))
+    for warn, block in (("warn_conversation", "block_conversation"), ("warn_day", "block_day")):
+        if float(cfg[warn]) >= float(cfg[block]):
+            problems.append(("error", f"{warn} (${cfg[warn]:.2f}) no es menor que {block} (${cfg[block]:.2f}): "
+                                      f"el bloqueo llega sin aviso previo"))
+    if float(cfg["block_day"]) > float(cfg["cycle_limit"]):
+        problems.append(("warning", "block_day supera el tope del ciclo: nunca va a frenar antes que Cursor"))
+    budgets = cfg.get("model_budgets") or {}
+    total = sum(float(v) for v in budgets.values())
+    if total > float(cfg["cycle_limit"]):
+        problems.append(("warning", f"Los presupuestos por modelo suman ${total:.2f}, más que el tope del ciclo "
+                                    f"(${float(cfg['cycle_limit']):.2f})"))
+    for pattern in budgets:
+        if known_models and not any(fnmatch.fnmatch(m, pattern) for m in known_models):
+            problems.append(("warning", f"El patrón {pattern!r} no coincide con ningún modelo usado este ciclo"))
+    patterns = list(budgets)
+    for i, first in enumerate(patterns):
+        for later in patterns[i + 1:]:
+            shadowed = [m for m in known_models if fnmatch.fnmatch(m, later) and fnmatch.fnmatch(m, first)]
+            if shadowed:
+                problems.append(("warning", f"{later!r} queda tapado por {first!r} para {shadowed[0]}: gana el primero"))
+    return problems
+
+
+def known_models(entries: list, home: Path = HOME) -> list:
+    base = load_json(home / "baseline.json", {})
+    return sorted(set((base.get("by_model") or {})) | {e.get("model") for e in entries if e.get("model")})
