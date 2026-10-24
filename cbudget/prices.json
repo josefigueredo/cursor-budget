@@ -3,17 +3,18 @@
   "surcharge_per_mtok": 0.25,
   "cache_write_multiplier": 1.25,
   "models": [
-    {"prefix": "claude-opus-5-5", "input": 4.0, "cache_read": 0.20, "output": 20.0, "surcharge": true, "source": "claude-api skill; reproduced the Oct 21 bill"},
-    {"prefix": "claude-sonnet-5-5", "input": 2.0, "cache_read": 0.10, "output": 10.0, "surcharge": true, "source": "learncursor.dev; reproduced the bill"},
+    {"prefix": "claude-opus-5-5", "input": 4.0, "cache_read": 0.20, "output": 20.0, "surcharge": true, "source": "claude-api skill; October CSV +4%"},
+    {"prefix": "claude-sonnet-5-5", "input": 2.0, "cache_read": 0.10, "output": 10.0, "surcharge": true, "source": "learncursor.dev; October CSV +3%"},
     {"prefix": "claude-haiku-5-5", "input": 1.0, "cache_read": 0.10, "output": 5.0, "surcharge": true, "source": "estimate"},
-    {"prefix": "gpt-5.6-terra", "input": 2.0, "cache_read": 0.20, "output": 12.0, "surcharge": true, "cache_write_multiplier": 1.0, "source": "fast.io; reproduced the bill"},
+    {"prefix": "gpt-5.6-terra", "input": 2.0, "cache_read": 0.20, "output": 12.0, "surcharge": true, "cache_write_multiplier": 1.0, "source": "fast.io; October CSV -7%"},
     {"prefix": "gpt-5.6-luna", "input": 0.20, "cache_read": 0.02, "output": 1.20, "surcharge": true, "cache_write_multiplier": 1.0, "source": "fast.io"},
     {"prefix": "gpt-5.6-sol", "input": 4.0, "cache_read": 0.40, "output": 20.0, "surcharge": true, "cache_write_multiplier": 1.0, "source": "fast.io"},
     {"prefix": "gpt-5.3-codex", "input": 1.75, "cache_read": 0.175, "output": 14.0, "surcharge": true, "cache_write_multiplier": 1.0, "source": "estimate"},
     {"prefix": "gemini", "input": 0.50, "cache_read": 0.05, "output": 3.0, "surcharge": true, "cache_write_multiplier": 1.0, "source": "estimate"},
-    {"prefix": "cursor-grok", "input": 2.0, "cache_read": 0.50, "output": 6.0, "surcharge": false, "cache_write_multiplier": 1.0, "source": "fast.io (Grok 4.7)"},
-    {"prefix": "auto", "input": 2.0, "cache_read": 0.20, "output": 10.0, "surcharge": true, "cache_write_multiplier": 1.25, "source": "estimate: since Aug 2026 Auto bills the list price of the routed model, but the hook payload only says auto-<mode> (auto-smart, measured 2026-10-24); priced like Sonnet 5.5 until calibrated against the CSV"},
-    {"prefix": "composer", "input": 1.25, "cache_read": 0.125, "output": 10.0, "surcharge": false, "cache_write_multiplier": 1.0, "source": "estimate"}
+    {"prefix": "cursor-grok", "input": 2.0, "cache_read": 0.50, "output": 6.0, "surcharge": false, "cache_write_multiplier": 1.0, "source": "fast.io (Grok 4.7); October CSV +6%"},
+    {"prefix": "grok", "input": 2.0, "cache_read": 0.50, "output": 6.0, "surcharge": false, "cache_write_multiplier": 1.0, "source": "as cursor-grok; the CSV names Auto-routed Grok grok-4.7-high"},
+    {"prefix": "auto", "input": 2.0, "cache_read": 0.20, "output": 10.0, "surcharge": true, "cache_write_multiplier": 1.25, "source": "October CSV: 118 plain auto events $39.11 billed vs $41.54 estimated (+6%). Since Aug 2026 Auto bills the list price of the routed model, but the hook payload only says auto-<mode> (auto-smart, measured 2026-10-24); priced like Sonnet 5.5 until calibrated against the CSV"},
+    {"prefix": "composer", "input": 0.50, "cache_read": 0.20, "output": 2.50, "surcharge": false, "cache_write_multiplier": 1.0, "source": "fit to the October CSV: 61 events $4.05 billed vs $4.11 estimated"}
   ],
   "unknown": {"input": 4.0, "cache_read": 0.40, "output": 20.0, "surcharge": true, "source": "unknown model: priced high on purpose"}
 }
