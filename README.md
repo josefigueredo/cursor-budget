@@ -67,5 +67,11 @@ python3 ../harness-docs/hdoc.py check            # la documentación sigue el fo
 docs/img/src/capturas.sh                         # rehace todas las capturas
 ```
 
+El episodio del taller de skills (instalar, el caso principal en el chat de Cursor, la terminal, cuando te frena,
+el presupuesto por modelo, si algo falla) vive en [`workshop/`](workshop/): `workshop/dist/serie-cursor.html` es una sola
+página autocontenida, con notas emergentes sobre lo que hay que mirar, y `workshop/dist/control.html` el control de
+quien presenta. Se arma con el motor del taller en su rama de notas emergentes (`feat/callouts`):
+`python3 <taller>/build.py --root workshop build`.
+
 TDD y Conventional Commits. `docs/img/src/capturas.sh` corre los guiones de terminal contra un `HOME` descartable, sin
 mandar notificaciones, arma las maquetas con `gen_mocks.py` y pasa todo a PNG con `hdoc render`.
