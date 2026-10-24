@@ -1,0 +1,36 @@
+<!doctype html><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#cfd3e6;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Helvetica,Arial,sans-serif}
+.win{margin:22px;border-radius:12px;overflow:hidden;box-shadow:0 18px 50px rgba(20,20,40,.35),0 0 0 1px rgba(0,0,0,.25)}
+.bar{height:38px;background:#2b2b31;display:flex;align-items:center;padding:0 14px;position:relative}
+.dots span{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px}
+.dots .r{background:#ff5f57}.dots .y{background:#febc2e}.dots .g{background:#28c840}
+.ttl{position:absolute;left:0;right:0;text-align:center;color:#a9a9b3;font-size:13px}
+.term{background:#16161a;color:#e6e6ea;font:13.5px/1.2 Menlo,Monaco,monospace;padding:14px 18px 18px;white-space:pre}
+.p{color:#7ee787}.k{color:#79c0ff}.u{color:#ffa657}</style><div class="win" style="width:1196px"><div class="bar"><div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div><div class="ttl">zsh — ~</div></div><div class="term"><span class="p">$</span> <span class="k">cbudget limits edit</span>
+Enter deja el valor actual.
+
+Avisa cuando un chat pasa este monto (warn_conversation) [$2.00]: <span class="u"></span>
+Bloquea un chat que llegó a este monto (block_conversation) [$5.00]: <span class="u"></span>
+Avisa cuando el día pasa este monto (warn_day) [$8.00]: <span class="u"></span>
+Bloquea el resto del día al llegar a este monto (block_day) [$15.00]: <span class="u">12</span>
+Tope del plan en el ciclo (cycle_limit) [$200.00]: <span class="u"></span>
+Día del mes en que se reinicia el ciclo (cycle_day) [1]: <span class="u"></span>
+Parte del presupuesto de un modelo que dispara el aviso (model_warn) [80%]: <span class="u"></span>
+Notificación después de cada turno (notify_each_turn) [sí]: <span class="u"></span>
+
+Presupuesto por modelo: un monto lo cambia, &#x27;-&#x27; lo quita.
+  claude-opus-* [$40.00]: <span class="u">30</span>
+  claude-sonnet-* [$60.00]: <span class="u"></span>
+  auto* [$30.00]: <span class="u"></span>
+  gpt-* [$15.00]: <span class="u"></span>
+  Nuevo patrón (Enter para terminar, p. ej. composer-*): <span class="u">composer-*</span>
+  Presupuesto para composer-*: <span class="u">10</span>
+  Nuevo patrón (Enter para terminar, p. ej. composer-*): <span class="u"></span>
+
+Modelos bloqueados, separados por coma [claude-opus-*-high, *-xhigh, *-max]: <span class="u"></span>
+
+Cambios:
+  block_day: $15.00 -&gt; $12.00
+  claude-opus-*: $40.00 -&gt; $30.00
+  composer-*: sin presupuesto -&gt; $10.00
+¿Guardar? [s/N]: <span class="u">s</span>
+Guardado.</div></div>

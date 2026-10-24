@@ -1,0 +1,10 @@
+# Lo que muestra cursor.com/dashboard → Usage, en "Your monthly usage"
+$ cbudget seed --amount 84,30
+$ cbudget limits set cycle_limit 200
+$ cbudget limits model 'claude-opus-*' 40
+$ cbudget limits set block_day doce
+$ cbudget limits set warn_day 20
+$ cbudget limits check
+$ cbudget limits set warn_day 8
+# Sin terminal (desde un agente), el editor interactivo se niega
+$ cbudget limits edit < /dev/null

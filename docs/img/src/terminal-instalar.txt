@@ -1,0 +1,7 @@
+# Una línea: gh api baja bootstrap.sh del repo interno y lo corre. Acá CURSOR_BUDGET_REPO clona esta copia en vez de GitHub.
+$ CURSOR_BUDGET_REPO=file://$PWD bash bootstrap.sh
+# Con el repo clonado: el mismo instalador. Volver a correrlo actualiza la copia y no toca tus datos.
+$ ./install.sh
+$ readlink ~/.agents/skills/cursor-budget ~/.claude/skills/cursor-budget
+$ tail -n 1 ~/.zshrc
+$ python3 -m json.tool ~/.cursor/hooks.json

@@ -1,133 +1,71 @@
 # cursor-budget
 
-Dos hooks globales de Cursor que cuidan el gasto:
+Un freno de gasto para Cursor: dos hooks globales y un CLI chico (`cbudget`), con una skill para manejarlo desde el chat.
+Después de cada turno estima cuánto costó y te avisa con una notificación de macOS cuando un chat, el día, el ciclo o un
+modelo pasan su límite. Antes de cada prompt, si ya llegaste al límite de bloqueo o el modelo está bloqueado, lo frena
+sin que llegue al modelo, con costo cero.
 
-- **`stop`**: estima el costo de cada turno, lo anota en `~/.cursor/budget/ledger.jsonl` y avisa con una
-  notificación de macOS la primera vez que un chat o el día pasa un límite.
-- **`beforeSubmitPrompt`**: bloquea el prompt antes de que llegue al modelo, con costo cero, si el modelo está en la
-  lista de bloqueados o si el chat o el día ya gastaron su límite de bloqueo.
+| Le decís al agente… | Y la skill… |
+|---|---|
+| *«¿Cuánto llevo gastado en Cursor y cómo están mis límites?»* | corre `cbudget report` y `cbudget limits` y te contesta con el ciclo, lo que queda, el gasto por modelo y los límites activos |
+| *«Bajá el tope diario a 12»* | `cbudget limits set block_day 12`, después `cbudget limits check`, y te dice el valor anterior y el nuevo |
+| *«Poné un presupuesto de 40 dólares para Opus en este ciclo»* | `cbudget limits model 'claude-opus-*' 40`: avisa al 80% y bloquea Opus al agotarlo |
+| *«Bloqueá GPT»* / *«Desbloqueá Opus High»* | `cbudget limits block 'gpt-*'` / `cbudget limits unblock 'claude-opus-*-high'` |
+| *«Levantá el bloqueo media hora»* | `cbudget allow --minutes 30`, solo porque se lo pediste |
+| *«Cursor dice que llevo 84,30 este mes»* | `cbudget seed --amount 84,30`: desde ahí el total del ciclo es el de Cursor más lo que ve el hook |
 
-## Instalar
+**La skill nunca sube un límite, desbloquea ni corre `allow` por su cuenta**, aunque un bloqueo le corte la tarea. Cada
+cambio queda anotado con quién lo hizo y sale una notificación. Lo que no puede ver está en
+[qué te protege y qué no](docs/showcase.md#qué-te-protege-y-qué-no).
 
-Una línea, con [gh](https://cli.github.com) con la sesión iniciada (`brew install gh && gh auth login`):
+## Elegí por dónde empezar
+
+| Componente | Qué resuelve | Escribe | Se instala con | Showcase | Instalación |
+|---|---|---|---|---|---|
+| **Hook `stop`** | Saber cuánto costó cada turno y enterarte cuando un chat, el día o el ciclo pasan su límite | `~/.cursor/budget/ledger.jsonl` | `install.sh` | [Ver el caso](docs/showcase.md#1-ver-cuánto-llevás) | [Instalar](docs/instalacion.md#1-instalar) |
+| **Hook `beforeSubmitPrompt`** | Frenar un prompt antes de que cueste: modelo bloqueado, presupuesto agotado, chat o día en su tope | `~/.cursor/budget/blocks.jsonl` | `install.sh` | [Ver el caso](docs/showcase.md#4-cuando-te-frena) | [Instalar](docs/instalacion.md#6-cuando-te-frena) |
+| **Skill `cursor-budget`** | Ver el gasto y cambiar los límites conversando, desde Cursor, Claude Code o Codex | `~/.cursor/budget/config.json` y `changes.jsonl` | `install.sh` | [Ver el caso](docs/showcase.md#2-cambiar-un-límite-desde-el-chat) | [Instalar](docs/instalacion.md#5-cambiar-un-límite) |
+| **`cbudget` en la terminal** | El reporte con colores y el editor interactivo de límites | `~/.cursor/budget/config.json` y `changes.jsonl` | `install.sh` (alias) | [Ver el caso](docs/showcase.md#3-el-reporte-y-el-editor-en-la-terminal) | [Instalar](docs/instalacion.md#4-preguntar-cuánto-llevás) |
+
+## Un ejemplo: el reporte
+
+`cbudget report` en la terminal, con el mismo aspecto que la página de uso de Cursor: el ciclo, lo disponible, el
+presupuesto de cada modelo y el gasto por día. El recorrido completo está en el
+[showcase](docs/showcase.md#3-el-reporte-y-el-editor-en-la-terminal).
+
+![Terminal: cbudget report con el ciclo, el presupuesto por modelo y el gasto por día](docs/img/terminal-report.png)
+
+*Salida real del `cbudget` actual con datos inventados (un ciclo de ejemplo de $85 sobre $200), no el gasto de nadie.*
+
+## Qué documento leer
+
+| Si querés… | Leé | Qué encontrás |
+|---|---|---|
+| **Instalarlo y usarlo, conversando con tu agente** | [Instalación y primer uso](docs/instalacion.md) | Todo con prompts: instalar, comprobar las notificaciones, cargar lo gastado, preguntar, cambiar límites y qué hacer cuando te frena |
+| **Instalarlo comando por comando** | [Instalación detallada](docs/instalacion-detallada.md) | Requisitos, las formas de instalar, qué deja instalado, los comandos de uso y cómo desinstalar, con capturas de la terminal |
+| **Ver todo lo que hace** | [Showcase](docs/showcase.md) | Cada caso: qué le decís al agente, qué corre, qué ves y qué pasa si algo falla |
+| **Consultar los detalles** | [Referencia](docs/referencia.md) | Cada comando, los límites por defecto, los archivos, cómo estima el costo, lo medido y los códigos de salida |
+
+## En tres comandos
 
 ```bash
 gh api repos/josefigueredo/cursor-budget/contents/bootstrap.sh -H "Accept: application/vnd.github.raw" | bash
+cbudget seed --amount 84.30   # en una terminal nueva: lo que dice cursor.com/dashboard → Usage
+cbudget report
 ```
 
-El repo es interno: un `curl` sin autenticación recibe 404, por eso la línea usa `gh`. `bootstrap.sh` clona el repo
-en una carpeta temporal, corre `install.sh` y la borra. Para actualizar, corré la misma línea.
+Requisitos: macOS, Cursor, `python3` 3.9 o más (solo biblioteca estándar) y [gh](https://cli.github.com) con la sesión
+iniciada, porque el repo es interno y un `curl` sin autenticación recibe 404. Los datos quedan en `~/.cursor/budget/`,
+fuera de todo repo.
 
-Con el repo ya clonado:
+## Desarrollo
 
 ```bash
-./install.sh
+python3 -m unittest discover -s tests
+/usr/bin/python3 -m unittest discover -s tests   # compatibilidad con 3.9
+python3 ../harness-docs/hdoc.py check            # la documentación sigue el formato de las skills de Harness
+docs/img/src/capturas.sh                         # rehace todas las capturas
 ```
 
-Copia el programa a `~/.cursor/budget/app` (su propia carpeta, junto al registro y la configuración), apunta los
-hooks de Cursor a esa copia y agrega `alias cbudget=...` a `~/.zshrc` (o `~/.bashrc`). Así los hooks siguen andando
-aunque este repo se mueva o cambie de rama. Volver a correrlo actualiza la copia sin tocar `config.json`,
-`ledger.jsonl` ni `baseline.json`. Al final manda una notificación de prueba: si no aparece, macOS las tiene
-bloqueadas para Script Editor y el instalador dice cómo habilitarlas (`CURSOR_BUDGET_NO_NOTIFY=1` la saltea). El hook y el alias usan el `python3` con el que se instaló, con ruta absoluta,
-porque Cursor no siempre hereda el PATH de la terminal: si actualizás Python a otra versión menor, volvé a instalar.
-
-## Comandos
-
-```bash
-cbudget install-hook         # lo suma a ~/.cursor/hooks.json sin tocar los demás (deja un .bak)
-cbudget limits                      # límites vigentes, gasto contra presupuesto por modelo y chequeo de coherencia
-cbudget limits check                # solo los problemas (exit 1 si hay un error)
-cbudget limits edit                 # editor interactivo, solo en terminal
-cbudget limits set block_day 12     # cambia un límite general (también 80%, si/no)
-cbudget limits model 'claude-sonnet-*' 70   # presupuesto del ciclo para un modelo (--remove lo quita)
-cbudget limits block 'claude-opus-*'        # bloquea un patrón (unblock lo libera)
-cbudget alias                # agrega o actualiza el alias en el rc de la shell
-cbudget report --days 7      # ciclo, presupuestos y gasto por día, modelo y chat (en color; --color never o NO_COLOR para texto plano)
-cbudget allow --minutes 30   # levanta los bloqueos un rato
-cbudget calibrate usage.csv  # cobrado contra estimado por modelo, desde el CSV del dashboard
-cbudget seed usage.csv       # toma lo cobrado este ciclo como base del total del ciclo (o --amount 84.30)
-cbudget notify-test          # manda una notificación de prueba y explica cómo habilitarlas
-```
-
-![cbudget report](docs/report.png)
-
-Maqueta: la salida real de `cbudget report` en color, con datos inventados. La genera `python3 docs/demo.py
-report.html` (un ciclo de ejemplo, sin el gasto de nadie); la captura es esa página a 900 px de ancho.
-
-## Límites por defecto
-
-| Clave | Valor | Qué hace |
-|---|---|---|
-| `warn_conversation` | $2 | avisa: "abrí un chat nuevo" |
-| `block_conversation` | $5 | bloquea los prompts siguientes de ese chat |
-| `warn_day` | $8 | avisa |
-| `block_day` | $15 | bloquea hasta mañana o hasta `allow` |
-| `cycle_day` / `cycle_limit` | 1 / $225 | día en que se reinicia el ciclo y tope del plan |
-| `cycle_warn` | 75%, 90%, 100% | avisa al cruzar esas partes del tope |
-| `notify_each_turn` | sí | después de cada turno: costo del turno, del chat y del ciclo |
-| `model_budgets` | ninguno | presupuesto del ciclo por patrón de modelo, p. ej. `{"claude-opus-*": 75}`: avisa al 80% (`model_warn`) y bloquea ese modelo al agotarlo |
-| `blocked_models` | `claude-opus-*-high`, `*-xhigh`, `*-max` | bloquea esos modelos |
-
-Para cambiarlos, escribí solo las claves que quieras en `~/.cursor/budget/config.json`. Los precios están en
-`cbudget/prices.json`; una copia en `~/.cursor/budget/prices.json` tiene prioridad.
-
-## Lo medido (2026-10-24, cursor-agent 2026.10.22)
-
-- El payload de `stop` trae `model`, `conversation_id`, `input_tokens`, `output_tokens`, `cache_read_tokens` y
-  `cache_write_tokens`, por turno, no acumulado. `input_tokens` incluye los tokens de caché: un segundo turno
-  dio 22934 de entrada con 19807 de lectura de caché.
-- `beforeSubmitPrompt` trae `model` y `conversation_id`. Responder `{"continue": false}` **bloquea en `cursor-agent`**:
-  no hubo respuesta ni evento `stop`. El `user_message` no se ve en la terminal, por eso además sale una notificación.
-  **En el IDE también bloquea** (Cursor 2026.10.22, probado el 2026-10-24): muestra "Submission blocked by hook" con el
-  `user_message` y el prompt no llega al modelo.
-- La fórmula (precio de API, más 1.25x en la escritura de caché, más $0.25 por millón en modelos de terceros)
-  reproduce una factura real de Opus con un error de ±5%. El test `test_opus_turn_follows_the_formula` fija la
-  fórmula con números de ejemplo.
-
-Cada bloqueo queda anotado en `~/.cursor/budget/blocks.jsonl`. Sirve de prueba de que el hook frenó, aunque
-el IDE no muestre el mensaje.
-
-## Gasto del ciclo
-
-Sin CSV: mirá en cursor.com/dashboard → Usage el monto de "Your monthly usage" (el primero de "$84.30 / $200", en el ejemplo) y
-corré `cbudget seed --amount 84.30`. Es la vía para quien no exporta archivos; no trae el detalle por modelo ni por
-día, así que los presupuestos por modelo cuentan desde ese momento. Si instalás el día que arranca el ciclo, no
-hace falta ningún seed: el registro ve el ciclo entero.
-
-El hook no puede preguntarle a Cursor cuánto llevás: suma lo que ve. `cbudget seed <csv>` guarda lo que Cursor cobró
-este ciclo según el CSV y, a partir del último evento del CSV, el hook suma sus estimaciones. Sin `seed`, el total
-del ciclo cuenta solo desde la instalación y el aviso lo dice. Un turno que termina justo después del último evento
-del CSV puede contarse dos veces (centavos).
-
-## Terminal y chat: un solo CLI
-
-En la terminal, `cbudget limits edit` pregunta límite por límite (Enter deja el actual), muestra los cambios y el
-chequeo, y guarda solo si confirmás. Desde un chat de Cursor, Claude Code o Codex, la skill `cursor-budget`
-(`SKILL.md`, la instala `install.sh`) le dice al agente qué subcomando no interactivo correr. La skill solo cambia un
-límite si se lo pediste en ese chat; igual, cada cambio queda en `~/.cursor/budget/changes.jsonl` con quién lo hizo
-(`terminal` o `agente`) y sale una notificación, porque un agente podría subirse su propio presupuesto.
-
-## Presupuesto por modelo
-
-`model_budgets` en `~/.cursor/budget/config.json` asigna un tope del ciclo a cada patrón (`fnmatch`; gana el primero
-que coincide, en el orden escrito). Lo gastado sale de `seed` (por modelo) más las estimaciones posteriores. Las filas
-del CSV que Auto derivó (`grok-4.7-high (Auto Balanced)`) cuentan para `auto*`, porque el hook solo ve `auto-smart`.
-`cbudget report` muestra cuánto le queda a cada uno.
-
-## Calibrar
-
-Exportá el CSV en el dashboard de Cursor (Usage → Export) y corré `cbudget calibrate <csv>`. Marca con
-`<- ajustar` los modelos con más de 10% de error y los que no coinciden con ningún precio. En la calibración
-original el total estimado quedó 4% arriba de lo cobrado; cada modelo, entre −7% y +6%.
-
-## Límites conocidos
-
-- **Auto**: el payload dice `auto-smart` (el modo), nunca el modelo al que Auto derivó. Desde agosto de 2026 Auto cobra
-  el precio de lista de ese modelo, así que el costo de Auto es una estimación a precio de Sonnet 5.5. Auto no se bloquea.
-- El registro empieza a contar el día que lo instalás: no conoce el gasto anterior. El tope real del mes lo pone Cursor.
-- Si el hook falla, deja pasar el prompt (falla abierto) para no romper Cursor.
-- Los precios marcados `estimate` en `prices.json` no están verificados.
-
-## Desarrollar
-
-`python3 -m unittest discover -s tests`, también con `/usr/bin/python3` (3.9). Solo biblioteca estándar. Conventional commits.
+TDD y Conventional Commits. `docs/img/src/capturas.sh` corre los guiones de terminal contra un `HOME` descartable, sin
+mandar notificaciones, arma las maquetas con `gen_mocks.py` y pasa todo a PNG con `hdoc render`.

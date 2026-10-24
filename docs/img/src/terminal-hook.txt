@@ -1,0 +1,8 @@
+# Lo que Cursor le pasa al hook antes de mandar un prompt con Opus High, bloqueado por defecto
+$ echo '{"hook_event_name":"beforeSubmitPrompt","model":"claude-opus-5-5-high","conversation_id":"c1"}' | cbudget hook
+$ tail -n 1 ~/.cursor/budget/blocks.jsonl
+$ cbudget allow --minutes 30
+$ echo '{"hook_event_name":"beforeSubmitPrompt","model":"claude-opus-5-5-high","conversation_id":"c1"}' | cbudget hook
+# Y al terminar cada turno, los tokens que Cursor informa
+$ echo '{"hook_event_name":"stop","model":"claude-sonnet-5-5-high","conversation_id":"c1","input_tokens":240000,"cache_read_tokens":200000,"output_tokens":8000}' | cbudget hook
+$ tail -n 1 ~/.cursor/budget/ledger.jsonl

@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#cfd3e6;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Helvetica,Arial,sans-serif}
+.win{margin:22px;border-radius:12px;overflow:hidden;box-shadow:0 18px 50px rgba(20,20,40,.35),0 0 0 1px rgba(0,0,0,.25)}
+.bar{height:38px;background:#2b2b31;display:flex;align-items:center;padding:0 14px;position:relative}
+.dots span{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px}
+.dots .r{background:#ff5f57}.dots .y{background:#febc2e}.dots .g{background:#28c840}
+.ttl{position:absolute;left:0;right:0;text-align:center;color:#a9a9b3;font-size:13px}
+.term{background:#16161a;color:#e6e6ea;font:13.5px/1.5 Menlo,Monaco,monospace;padding:14px 18px 18px;white-space:pre-wrap;word-break:break-word}
+.p{color:#7ee787}.c{color:#7d8590}.o{color:#e6e6ea}.k{color:#79c0ff}.a{color:#d2a8ff}.u{color:#ffa657}</style><div class="win" style="width:1196px"><div class="bar"><div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div><div class="ttl">zsh — ~/cursor-budget</div></div><div class="term"><span class="c"># Lo que Cursor le pasa al hook antes de mandar un prompt con Opus High, bloqueado por defecto</span>
+<span class="p">$</span> <span class="k">echo &#x27;{&quot;hook_event_name&quot;:&quot;beforeSubmitPrompt&quot;,&quot;model&quot;:&quot;claude-opus-5-5-high&quot;,&quot;conversation_id&quot;:&quot;c1&quot;}&#x27; | cbudget hook</span>
+<span class="o">{&quot;continue&quot;: false, &quot;user_message&quot;: &quot;cursor-budget: el modelo claude-opus-5-5-high est\u00e1 bloqueado; eleg\u00ed otro o corr\u00e9 `cbudget allow`&quot;}</span>
+<span class="p">$</span> <span class="k">tail -n 1 ~/.cursor/budget/blocks.jsonl</span>
+<span class="o">{&quot;t&quot;: 1792879736, &quot;conversation_id&quot;: &quot;c1&quot;, &quot;model&quot;: &quot;claude-opus-5-5-high&quot;, &quot;reason&quot;: &quot;el modelo claude-opus-5-5-high está bloqueado; elegí otro o corré `cbudget allow`&quot;}</span>
+<span class="p">$</span> <span class="k">cbudget allow --minutes 30</span>
+<span class="o">bloqueos levantados hasta las 19:38</span>
+<span class="p">$</span> <span class="k">echo &#x27;{&quot;hook_event_name&quot;:&quot;beforeSubmitPrompt&quot;,&quot;model&quot;:&quot;claude-opus-5-5-high&quot;,&quot;conversation_id&quot;:&quot;c1&quot;}&#x27; | cbudget hook</span>
+<span class="o">{}</span>
+<span class="c"># Y al terminar cada turno, los tokens que Cursor informa</span>
+<span class="p">$</span> <span class="k">echo &#x27;{&quot;hook_event_name&quot;:&quot;stop&quot;,&quot;model&quot;:&quot;claude-sonnet-5-5-high&quot;,&quot;conversation_id&quot;:&quot;c1&quot;,&quot;input_tokens&quot;:240000,&quot;cache_read_tokens&quot;:200000,&quot;output_tokens&quot;:8000}&#x27; | cbudget hook</span>
+<span class="o">{}</span>
+<span class="p">$</span> <span class="k">tail -n 1 ~/.cursor/budget/ledger.jsonl</span>
+<span class="o">{&quot;t&quot;: 1792879736, &quot;conversation_id&quot;: &quot;c1&quot;, &quot;model&quot;: &quot;claude-sonnet-5-5-high&quot;, &quot;usd&quot;: 0.242, &quot;input_tokens&quot;: 240000, &quot;output_tokens&quot;: 8000, &quot;cache_read_tokens&quot;: 200000, &quot;cache_write_tokens&quot;: null}</span></div></div>
