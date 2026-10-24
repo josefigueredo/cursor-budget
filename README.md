@@ -34,7 +34,8 @@ Para cambiarlos, escribí solo las claves que quieras en `~/.cursor/budget/confi
   dio 22934 de entrada con 19807 de lectura de caché.
 - `beforeSubmitPrompt` trae `model` y `conversation_id`. Responder `{"continue": false}` **bloquea en `cursor-agent`**:
   no hubo respuesta ni evento `stop`. El `user_message` no se ve en la terminal, por eso además sale una notificación.
-  **En el IDE no está probado**: en el foro de Cursor hay reportes de que el bloqueo no anda en algunas versiones.
+  **En el IDE también bloquea** (Cursor 2026.10.22, probado el 2026-10-24): muestra "Submission blocked by hook" con el
+  `user_message` y el prompt no llega al modelo.
 - La fórmula (precio de API, más 1.25x en la escritura de caché, más $0.25 por millón en modelos de terceros)
   reproduce la factura del 21 de octubre ($70.26 de Opus) con un error de ±5%. Hay un test que lo controla.
   Un turno de Gemini Flash dio $0.017 estimado, contra $0.02 en el CSV.
