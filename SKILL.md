@@ -1,7 +1,7 @@
 ---
 name: cursor-budget
 description: Use when the user asks about their Cursor spend or wants to see or change its limits from a chat ("cuánto llevo gastado en Cursor", "subí el presupuesto de Sonnet a 70", "bloqueá Opus", "desbloqueá gpt", "bajá el tope diario a 10", "chequeá mis límites", "levantá el bloqueo media hora"). Runs the cbudget CLI that the Cursor hooks already use. Not for Cursor's own plan limits, which only a team admin changes in Cursor's dashboard.
-compatibility: Requires cursor-budget installed with its install.sh (copy in ~/.cursor/budget/app, hooks in ~/.cursor/hooks.json) and python3 3.9+. Changes the user's own limits in ~/.cursor/budget/config.json; every change is logged in changes.jsonl and shown to the user as a macOS notification.
+compatibility: Requires cursor-budget installed with its install.sh (copy in ~/.cursor/budget/app, hooks in ~/.cursor/hooks.json) and macOS's /usr/bin/python3 (Command Line Tools). Changes the user's own limits in ~/.cursor/budget/config.json; every change is logged in changes.jsonl and shown to the user as a macOS notification.
 ---
 
 # cursor-budget

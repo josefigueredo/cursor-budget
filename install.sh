@@ -62,14 +62,15 @@ for host in .claude .codex; do
 done
 echo "skill: cursor-budget (Cursor, Claude Code, Codex) -> $DEST"
 # Cursor's status bar: optional too, since an organization may allow only approved extensions
+# (CURSOR_BUDGET_NO_EXTENSION=1 skips it, for tests and captures)
 CURSOR_CLI="$(command -v cursor || true)"
 [ -n "$CURSOR_CLI" ] || CURSOR_CLI="/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
-if [ -x "$CURSOR_CLI" ]; then
-  VSIX="$("$PY" "$REPO/vscode/build_vsix.py" "$DEST/vscode")"
-  if "$CURSOR_CLI" --install-extension "$VSIX" --force >/dev/null 2>&1; then
+if [ -z "${CURSOR_BUDGET_NO_EXTENSION:-}" ] && [ -x "$CURSOR_CLI" ]; then
+  if VSIX="$("$PY" "$REPO/vscode/build_vsix.py" "$DEST/vscode")" \
+      && "$CURSOR_CLI" --install-extension "$VSIX" --force >/dev/null 2>&1; then
     echo "extensión de Cursor instalada: el gasto aparece en la barra de estado (si no, Developer: Reload Window)"
   else
-    echo "(no pude instalar la extensión de Cursor; podés hacerlo a mano con Extensions: Install from VSIX… y $VSIX)"
+    echo "(no pude instalar la extensión de Cursor; podés hacerlo a mano con Extensions: Install from VSIX… y ${VSIX:-vscode/})"
   fi
 fi
 # the warnings arrive as macOS notifications; one now shows whether they are allowed (CURSOR_BUDGET_NO_NOTIFY=1 skips it)

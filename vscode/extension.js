@@ -14,6 +14,22 @@ const HOME = path.join(os.homedir(), ".cursor", "budget");
 const ENTRY = path.join(HOME, "app", "cbudget.py");
 const LEDGER = path.join(HOME, "ledger.jsonl");
 const PYTHON = "/usr/bin/python3";
+// Without the Command Line Tools (often after a macOS upgrade) /usr/bin/python3 is a stub that opens an install
+// dialog on every call: the extension checks for the real one first and never calls the stub.
+const REAL_PYTHON = "/Library/Developer/CommandLineTools/usr/bin/python3";
+
+let pythonFound = false;  // once found it stays; a missing one is looked for again on each refresh
+
+function pythonReady() {
+  if (pythonFound || fs.existsSync(REAL_PYTHON)) return (pythonFound = true);
+  try {
+    const dev = cp.execFileSync("/usr/bin/xcode-select", ["-p"], {timeout: 2000}).toString().trim();
+    pythonFound = fs.existsSync(path.join(dev, "usr", "bin", "python3"));
+  } catch (e) {
+    pythonFound = false;
+  }
+  return pythonFound;
+}
 const EVERY_MS = 10000;
 
 function activate(context) {
@@ -24,9 +40,11 @@ function activate(context) {
   let output = null;
 
   function refresh() {
-    if (!fs.existsSync(ENTRY)) {
+    if (!fs.existsSync(ENTRY) || !pythonReady()) {
       item.text = "$(pulse) cursor-budget sin instalar";
-      item.tooltip = "No encontré ~/.cursor/budget/app/cbudget.py: instalá cursor-budget.";
+      item.tooltip = fs.existsSync(ENTRY)
+        ? "Falta el python3 de macOS: corré xcode-select --install en una terminal."
+        : "No encontré ~/.cursor/budget/app/cbudget.py: instalá cursor-budget.";
       item.backgroundColor = undefined;
       return;
     }
@@ -48,6 +66,7 @@ function activate(context) {
   }
 
   context.subscriptions.push(item, vscode.commands.registerCommand("cursorBudget.report", () => {
+    if (!pythonReady()) return refresh();
     output = output || vscode.window.createOutputChannel("cursor-budget");
     cp.execFile(PYTHON, [ENTRY, "report", "--color", "never"], {timeout: 15000}, (err, stdout, stderr) => {
       output.clear();
