@@ -419,6 +419,17 @@ class TestCli(unittest.TestCase):
             cli.notify("hola")
         self.assertEqual(run.call_args[0][0][0], "/usr/bin/osascript")
 
+    def test_notify_passes_the_message_as_is_so_accents_do_not_break_applescript(self):
+        # json.dumps turned "·" into ·, which AppleScript rejects with a syntax error (-2741)
+        import subprocess
+        from unittest import mock
+        message = 'turno ~$0.03 · ciclo "así" de $150'
+        with mock.patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")) as run:
+            cli.notify(message)
+        argv = run.call_args[0][0]
+        self.assertEqual(argv[-1], message)
+        self.assertFalse(any("\\u" in a for a in argv))
+
     def test_a_failed_notification_is_logged_instead_of_lost(self):
         from unittest import mock
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(budget, "HOME", Path(tmp)), \

@@ -25,9 +25,12 @@ def notify(message: str) -> None:
     missing notification can be explained."""
     if os.environ.get("CURSOR_BUDGET_NO_NOTIFY"):
         return
-    script = f"display notification {json.dumps(message)} with title \"cursor-budget\""
+    # The message goes as an argument, not inside the script: AppleScript has no \u escapes, so an embedded
+    # "·" or "á" quoted by json.dumps was a syntax error and the notification never showed.
+    script = ["-e", "on run argv", "-e", "display notification (item 1 of argv) with title \"cursor-budget\"",
+              "-e", "end run"]
     try:
-        done = subprocess.run([OSASCRIPT, "-e", script], capture_output=True, timeout=5)
+        done = subprocess.run([OSASCRIPT, *script, message], capture_output=True, timeout=5)
         error = f"exit {done.returncode}: {done.stderr.decode(errors='replace').strip()}" if done.returncode else ""
     except (OSError, subprocess.SubprocessError) as exc:
         error = f"{type(exc).__name__}: {exc}"
