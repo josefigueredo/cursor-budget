@@ -1,7 +1,7 @@
 ---
 name: cursor-budget
 description: Use when the user asks about their Cursor spend or wants to see or change its limits from a chat ("cuánto llevo gastado en Cursor", "subí el presupuesto de Sonnet a 70", "bloqueá Opus", "desbloqueá gpt", "bajá el tope diario a 10", "chequeá mis límites", "levantá el bloqueo media hora"). Runs the cbudget CLI that the Cursor hooks already use. Not for Cursor's own plan limits, which only a team admin changes in Cursor's dashboard.
-compatibility: Requires cursor-budget installed with its install.sh (copy in ~/.cursor/budget/app, hooks in ~/.cursor/hooks.json) and python3 3.9+. Changes the user's own limits in ~/.cursor/budget/config.json; every change is logged in changes.jsonl and shown to the user as a macOS notification.
+compatibility: Requires cursor-budget installed with its install.sh (copy in ~/.cursor/budget/app, hooks in ~/.cursor/hooks.json) and macOS's /usr/bin/python3 (Command Line Tools). Changes the user's own limits in ~/.cursor/budget/config.json; every change is logged in changes.jsonl and shown to the user as a macOS notification.
 ---
 
 # cursor-budget
@@ -53,7 +53,9 @@ the user's call, and they see every change in a notification and in `~/.cursor/b
 | They say the plan's extra was granted ("me otorgaron el extra") | `cb extra`: the first adds $75 to the cycle cap, the second the exceptional $75; a third is refused. Only when they say it was granted, never to get past the cycle warning |
 | Load what Cursor shows as spent this cycle | `cb seed --amount <usd>` (or `cb seed <csv>` with an exported usage CSV) |
 | A test notification, or they get no warnings | `cb notify-test`, then relay its hint about System Settings |
-| Update cursor-budget | `gh api repos/josefigueredo/cursor-budget/contents/bootstrap.sh -H "Accept: application/vnd.github.raw" \| bash` (keeps their limits, ledger and seed) |
+| Update cursor-budget, or they got the "versión nueva" notification | `cb update` (keeps their limits, ledger and seed). Without it (an older install): `gh api repos/josefigueredo/cursor-budget/contents/bootstrap.sh -H "Accept: application/vnd.github.raw" \| bash` |
+| Which version they have, or whether a newer one exists | `cb version` |
+| The spend in cursor-agent's footer, or remove it | `cb statusline install` / `cb statusline remove`. It never replaces a status line of their own: if it refuses, tell them, do not edit `cli-config.json` |
 
 Patterns use shell globs against Cursor's model ids (`claude-opus-5-5-high`, `auto-smart`, `composer-2.5`,
 `gpt-5.6-terra-medium`). For model budgets the first matching pattern wins, in the order of config.json.

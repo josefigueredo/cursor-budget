@@ -39,6 +39,38 @@ def load_json(path: Path, fallback: dict) -> dict:
         return fallback
 
 
+def read_json_strict(path: Path) -> dict:
+    """A JSON object another tool owns (hooks.json, cli-config.json): raise ValueError, in Spanish and with the line,
+    instead of falling back, so a rewrite never drops what it could not read."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{path} no es JSON válido (línea {exc.lineno}: {exc.msg}); no lo toqué") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} no es un objeto JSON; no lo toqué")
+    return data
+
+
+def write_json_atomic(path: Path, data: dict) -> None:
+    """Write through a temporary file in the same folder and rename it over `path`: a reader sees the old file or the
+    new one, never half of it. Keeps the file's permissions."""
+    import os
+    import tempfile
+    path.parent.mkdir(parents=True, exist_ok=True)
+    mode = path.stat().st_mode & 0o777 if path.exists() else None
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+        if mode is not None:
+            os.chmod(tmp, mode)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+
+
 def config(home: Path = HOME) -> dict:
     return {**DEFAULTS, **load_json(home / "config.json", {})}
 

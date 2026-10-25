@@ -11,10 +11,15 @@ import time
 from pathlib import Path
 from typing import Optional, Sequence
 
-from . import budget, limits, render
+from . import budget, limits, render, statusline, update
 
 HOOKS = Path.home() / ".cursor" / "hooks.json"
 EVENTS = ("stop", "beforeSubmitPrompt")
+ENTRY = Path(__file__).resolve().parent.parent / "cbudget.py"
+APP = ENTRY.parent
+# The hooks and the alias run with macOS's own python, not the one that ran the installer: a Homebrew or venv python
+# disappears with `brew upgrade` or the venv, and the hook would silently stop running.
+PYTHON = "/usr/bin/python3"
 
 
 OSASCRIPT = "/usr/bin/osascript"  # by full path: Cursor runs hooks with its own PATH
@@ -44,13 +49,33 @@ def notify(message: str) -> None:
             pass
 
 
+def command(entry: Path, *args: str) -> str:
+    return " ".join(shlex.quote(a) for a in (PYTHON, str(entry), *args))
+
+
+def hook_command(entry: Path) -> str:
+    return command(entry, "hook")
+
+
+def spawn_update_check() -> None:
+    """Run `update-check` detached: the hook answers at once, and Cursor never waits for the network."""
+    try:
+        subprocess.Popen([sys.executable, str(ENTRY), "update-check"], stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        pass
+
+
 def hook(raw: str) -> dict:
     """Fail open: a broken budget hook must not stop Cursor, so any error answers {}."""
     try:
         payload = json.loads(raw or "{}")
         event = payload.get("hook_event_name")
         if event == "stop":
-            return budget.on_stop(payload, notify=notify)
+            answer = budget.on_stop(payload, notify=notify)
+            if update.installed(APP) and update.claim(budget.HOME, time.time()):
+                spawn_update_check()
+            return answer
         if event == "beforeSubmitPrompt":
             return budget.on_submit(payload, notify=notify)
     except Exception:  # noqa: BLE001 - see docstring
@@ -83,10 +108,15 @@ def _ours(entry: dict) -> bool:
 
 def install_hook(command: str, path: Path = HOOKS) -> bool:
     """Add `command` to stop and beforeSubmitPrompt, keeping every other hook. An older cbudget entry, from another
-    install folder, is pointed at `command` instead of duplicated. True when the file changed."""
-    data = budget.load_json(path, {}) or {"version": 1}
+    install folder, is pointed at `command` instead of duplicated. True when the file changed. A file it cannot read
+    as Cursor's hooks format raises ValueError and is left as it was: rewriting it would drop other tools' hooks."""
+    data = budget.read_json_strict(path) if path.exists() else {"version": 1}
+    hooks = data.get("hooks", {})
+    if not isinstance(hooks, dict) or any(
+            not isinstance(v, list) or not all(isinstance(e, dict) for e in v) for v in hooks.values()):
+        raise ValueError(f"{path} no tiene la forma de hooks de Cursor; no lo toqué")
     data.setdefault("version", 1)
-    hooks = data.setdefault("hooks", {})
+    data["hooks"] = hooks
     changed = False
     for event in EVENTS:
         entries = hooks.setdefault(event, [])
@@ -102,8 +132,7 @@ def install_hook(command: str, path: Path = HOOKS) -> bool:
         if path.exists():
             path.with_name(path.name + f".bak-{time.strftime('%Y-%m-%d-%H%M%S')}").write_text(
                 path.read_text(encoding="utf-8"), encoding="utf-8")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        budget.write_json_atomic(path, data)
     return changed
 
 
@@ -121,7 +150,7 @@ def rc_file() -> Path:
 
 def install_alias(entry: Path, rc: Path) -> bool:
     """Write `alias cbudget=...` into the shell rc, replacing an older cbudget alias. True when the file changed."""
-    line = f"alias cbudget={shlex.quote(f'{sys.executable} {entry}')}  {ALIAS_MARK}"
+    line = f"alias cbudget={shlex.quote(command(entry))}  {ALIAS_MARK}"
     lines = rc.read_text(encoding="utf-8").splitlines() if rc.exists() else []
     kept = [ln for ln in lines if not ln.rstrip().endswith(ALIAS_MARK)]
     if line in lines and len(lines) - len(kept) == 1:
@@ -200,6 +229,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     sub.add_parser("install-hook", help="add cbudget to ~/.cursor/hooks.json")
     sub.add_parser("alias", help="add `alias cbudget=...` to ~/.zshrc (or ~/.bashrc)")
     sub.add_parser("notify-test", help="send a test notification, to check that macOS shows them")
+    stl = sub.add_parser("statusline", help="cursor-agent's footer: print the line (stdin: its JSON), or install it")
+    stl.add_argument("action", nargs="?", choices=("install", "remove"))
+    stl.add_argument("--json", action="store_true", help="the numbers as JSON (Cursor's status bar extension)")
+    sub.add_parser("version", help="the installed commit and whether a newer one exists")
+    sub.add_parser("update", help="install the latest version from GitHub (keeps limits, ledger and seed)")
+    sub.add_parser("update-check", help="compare the install with GitHub once and notify a newer version")
     args = parser.parse_args(argv)
 
     if args.cmd == "hook":
@@ -252,12 +287,58 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         notify("Prueba: así se ven los avisos de gasto de Cursor.")
         print(NOTIFY_HINT)
         return 0
-    entry = Path(__file__).resolve().parent.parent / "cbudget.py"
+    if args.cmd == "statusline":
+        if args.json:
+            print(json.dumps(statusline.summary()))
+            return 0
+        return statusline_command(args.action)
+    if args.cmd == "version":
+        sha, known = update.installed(APP), update.state(budget.HOME)
+        print(f"instalado: {sha[:7] if sha else 'sin registrar (instalado antes de que se registrara la versión)'}")
+        if known.get("status") == "behind":
+            print("hay una versión nueva: corré `cbudget update`")
+        elif known.get("status"):
+            print("al día con GitHub" if known["status"] == "identical" else f"estado: {known['status']}")
+        return 0
+    if args.cmd == "update":
+        gh = update.gh_path()
+        if not gh:
+            print("hace falta gh con la sesión iniciada: brew install gh && gh auth login", file=sys.stderr)
+            return 1
+        return subprocess.run(["/bin/bash", "-c", update.UPDATE_COMMAND.replace("gh ", shlex.quote(gh) + " ", 1)]
+                              ).returncode
+    if args.cmd == "update-check":
+        update.check(budget.HOME, APP, notify=notify)
+        return 0
     if args.cmd == "alias":
         rc = rc_file()
-        print(f"alias agregado en {rc}; abrí otra terminal o corré: source {rc}" if install_alias(entry, rc)
+        print(f"alias agregado en {rc}; abrí otra terminal o corré: source {rc}" if install_alias(ENTRY, rc)
               else f"el alias ya estaba en {rc}")
         return 0
-    command = f"{shlex.quote(sys.executable)} {shlex.quote(str(entry))} hook"
-    print("hook instalado" if install_hook(command) else "el hook ya estaba instalado")
+    try:
+        print("hook instalado" if install_hook(hook_command(ENTRY), HOOKS) else "el hook ya estaba instalado")
+    except ValueError as exc:
+        print(f"{exc}. Arreglalo (o movelo) y volvé a correr la instalación.", file=sys.stderr)
+        return 1
+    return 0
+
+
+def statusline_command(action: Optional[str]) -> int:
+    if action is None:
+        try:
+            payload = json.loads(sys.stdin.read() or "{}")
+        except ValueError:
+            payload = {}
+        print(statusline.line(payload if isinstance(payload, dict) else {}))
+        return 0
+    try:
+        if action == "install":
+            changed = statusline.install(command(ENTRY, "statusline"))
+            print("statusLine de cursor-agent apuntada a cbudget; cerrá y volvé a abrir cursor-agent para verla"
+                  if changed else "la statusLine de cursor-agent ya era la de cbudget")
+        else:
+            print("statusLine de cbudget quitada" if statusline.remove() else "no había statusLine de cbudget")
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
     return 0

@@ -24,9 +24,14 @@ cbudget seed ~/Downloads/team-usage-events*.csv   # con varios archivos (un glob
 cbudget extra                # registra el extra del plan que te otorgaron (+$75; otra vez, el excepcional)
 cbudget calibrate usage.csv  # cobrado contra estimado por modelo
 cbudget notify-test          # manda una notificación de prueba y explica cómo habilitarlas
+cbudget statusline install   # el gasto en el pie de cursor-agent (remove lo quita; no pisa una statusLine ajena)
+cbudget version              # el commit instalado y si hay uno más nuevo
+cbudget update               # instala la última versión desde GitHub, sin tocar límites, registro ni seed
 cbudget install-hook         # suma el hook a ~/.cursor/hooks.json sin tocar los demás (deja un .bak)
 cbudget alias                # agrega o actualiza el alias en ~/.zshrc (o ~/.bashrc)
 cbudget hook                 # lo que corre Cursor: lee el evento por stdin y contesta JSON
+cbudget statusline           # lo que corre cursor-agent: lee su JSON por stdin e imprime la línea del pie
+cbudget update-check         # lo que arranca el hook una vez por día, en segundo plano
 ```
 
 Los montos aceptan `$` y coma decimal (`12,5`); las partes, `%` (`80%`); los sí/no, `si`, `sí`, `no`.
@@ -92,6 +97,40 @@ chequeo, y guarda solo si confirmás. Sin terminal se niega con 2. Desde un chat
 pediste en ese chat. Igual, cada cambio queda en `changes.jsonl` con quién lo hizo (`terminal` o `agente`) y sale una
 notificación, porque un agente podría subirse su propio presupuesto.
 
+## Versión nueva
+
+`install.sh` guarda en `app/VERSION` el commit que instaló. Una vez por día, al terminar un turno, el hook arranca en
+segundo plano `cbudget update-check`, que le pregunta a GitHub (con `gh`, porque el repo es interno) si `main` tiene
+commits más nuevos. Si los tiene, manda una notificación una sola vez por versión nueva: «Hay una versión nueva de
+cursor-budget…». El turno no espera la consulta. Sin `gh`, sin red o sin `app/VERSION` (una instalación anterior a
+esto), no avisa nada. Nada se actualiza solo: actualiza la persona, con `cbudget update` o pidiéndoselo al agente.
+
+## El pie de cursor-agent
+
+`install.sh` pone en `~/.cursor/cli-config.json` una `statusLine` que corre `cbudget statusline` cada 5 segundos:
+
+```
+Sonnet 5.5 · contexto 34% · hoy $3.20 de $15 · ciclo $84.10 de $150
+```
+
+cursor-agent reemplaza su pie por esa línea, así que la línea repite el modelo y cuánto del contexto se usó. `hoy` se
+compara con `block_day` y `ciclo` con el tope del plan más los extras. Si cursor-agent ya tenía otra `statusLine`, el
+instalador la deja como estaba. Ese archivo también guarda la sesión de cursor-agent: se lee sin adivinar (si no es
+JSON válido no se toca), se conservan todas las demás claves y sus permisos. Si había una sesión de cursor-agent
+abierta, cerrala y volvé a abrirla; si al cerrarse pisó el archivo, `cbudget statusline install` la vuelve a poner.
+
+## La barra de estado de Cursor
+
+La app de Cursor no deja que un hook escriba en el chat, así que el gasto va en la barra de estado, abajo a la
+derecha: `hoy $3.20 de $15 · ciclo $84 de $150`. Se pone amarilla al pasar `warn_day` o el primer aviso del ciclo
+(75%), y roja al llegar a `block_day` o al tope del ciclo. Un clic abre el reporte. Se actualiza cada 10 segundos y
+apenas se registra un turno.
+
+Es una extensión chica que vive en `vscode/` del repo. `install.sh` la arma (un `.vsix`, sin node) y la instala con
+`cursor --install-extension`. Si tu organización solo permite extensiones aprobadas y la rechaza, la instalación
+sigue igual y te dice dónde quedó el `.vsix` para instalarlo a mano (**Extensions: Install from VSIX…**). Si no
+aparece, corré **Developer: Reload Window**.
+
 ## Archivos
 
 Todo vive en `~/.cursor/budget/`, fuera de cualquier repo:
@@ -103,7 +142,11 @@ Todo vive en `~/.cursor/budget/`, fuera de cualquier repo:
 | `ledger.jsonl` | Un renglón por turno: modelo, chat, tokens y costo estimado | el hook `stop` |
 | `baseline.json` | Lo gastado este ciclo según Cursor | `seed` |
 | `blocks.jsonl` | Cada prompt bloqueado y por qué | el hook `beforeSubmitPrompt` |
-| `changes.jsonl` | Cada cambio de límites: antes, después y quién | los comandos de `limits` |
+| `changes.jsonl` | Cada cambio de límites y cada extra: antes, después y quién | los comandos de `limits` y `extra` |
+| `extras.json` | Los extras registrados en el ciclo actual | `extra` |
+| `update.json` | Cuándo se buscó una versión nueva, qué encontró y de cuál ya avisó | el hook `stop` y `update-check` |
+| `app/VERSION` | El commit instalado | `install.sh` |
+| `app/vscode/` | El `.vsix` de la extensión que se instaló en Cursor | `install.sh` |
 | `allow.json` | Hasta cuándo están levantados los bloqueos | `allow` |
 | `prices.json` | Opcional: tu propia tabla de precios, con prioridad sobre `app/cbudget/prices.json` | vos |
 
@@ -149,7 +192,7 @@ editá esa copia: el instalador no la pisa.
 | Código | Cuándo |
 |---|---|
 | 0 | Bien. El hook siempre sale con 0: si falla, contesta `{}` y deja pasar el prompt |
-| 1 | `limits check` encontró un error |
+| 1 | `limits check` encontró un error; `install-hook` o `statusline install` no tocaron un archivo que no pudieron leer o que ya tenía otra `statusLine` |
 | 2 | Uso: un valor que no es número o está fuera de rango, `limits edit` sin terminal, `seed` sin CSV ni `--amount` |
 
 ## Límites conocidos
@@ -159,5 +202,9 @@ editá esa copia: el instalador no la pisa.
   defecto; un presupuesto `auto*` sí lo frena al agotarse.
 - El total es una estimación: el tope real del ciclo lo pone Cursor.
 - Si el hook falla, deja pasar el prompt (falla abierto) para no romper Cursor.
+- Los hooks y el alias corren con `/usr/bin/python3`, el de macOS: un python de Homebrew desaparece con un
+  `brew upgrade` y el hook dejaría de correr sin avisar. Por eso la instalación pide las Command Line Tools.
+- La app de Cursor no muestra en el chat ningún texto informativo de un hook, solo el motivo de un bloqueo: los avisos
+  llegan como notificaciones de macOS. El gasto se ve en la barra de estado (la extensión) y en el pie de cursor-agent.
 - No es seguridad: quien usa la máquina puede editar `config.json` o correr `allow`. Es un freno para uno mismo.
 - Los precios marcados `estimate` en `prices.json` no están verificados.

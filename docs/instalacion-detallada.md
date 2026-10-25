@@ -7,8 +7,8 @@ Lo mismo que la [guía con prompts](instalacion.md), con los comandos y su salid
 
 - macOS: los avisos son notificaciones de macOS (`osascript`). En Linux el hook registra y bloquea igual, pero no avisa.
 - Cursor con hooks (`~/.cursor/hooks.json`). Lo medido es de Cursor y `cursor-agent` 2026.10.22.
-- `python3` 3.9 o más, solo biblioteca estándar. El de macOS (`/usr/bin/python3`) alcanza; si falta,
-  `xcode-select --install`.
+- El `python3` de macOS (`/usr/bin/python3`), que viene con las Command Line Tools; si falta,
+  `xcode-select --install`. Los hooks corren con ese y no con uno de Homebrew, que desaparece con un `brew upgrade`.
 - [gh](https://cli.github.com) con la sesión iniciada (`brew install gh && gh auth login`), o acceso SSH a GitHub: el
   repo es interno y un `curl` sin autenticación recibe 404.
 
