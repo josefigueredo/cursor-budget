@@ -211,6 +211,14 @@ class TestExtras(Home):
         self.assertIn("los 2 extras", out)
         self.assertEqual(json.loads((self.home / "changes.jsonl").read_text().splitlines()[0])["actor"], "agente")
 
+    def test_the_limits_screen_lists_each_extra_and_whether_it_was_registered(self):
+        self.grant()
+        text = limits.show(home=self.home, color=False, now=NOON)
+        self.assertIn("Extras del plan", text)
+        self.assertRegex(text, r"El extra\s+\$75\.00\s+registrado")
+        self.assertRegex(text, r"El extra excepcional\s+\$75\.00\s+sin registrar: `cbudget extra`")
+        self.assertIn("Tope del ciclo: $225.00", text)
+
     def test_the_report_counts_the_extra_in_the_cap(self):
         self.grant()
         out = render.report(7, home=self.home, now=NOON)

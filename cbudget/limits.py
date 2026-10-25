@@ -34,6 +34,16 @@ def show(home: Path = budget.HOME, color: bool = False, now: Optional[float] = N
     rows += ["", paint("* cambiado en ~/.cursor/budget/config.json; el resto es el valor por defecto", MUTED)]
     out += card("Generales", rows, size, paint)
 
+    granted = budget.extras_granted(home, now, cfg["cycle_day"])
+    rows = []
+    for i, usd in enumerate(cfg["cycle_extras"]):
+        state = paint("registrado", GREEN) if i < len(granted) else paint("sin registrar: `cbudget extra`", MUTED)
+        rows.append(pad(paint(budget.extra_name(i).capitalize(), TEXT), 22)
+                    + paint(f"{money(float(usd)):>10s}", TEXT, bold=True) + "   " + state)
+    rows += ["", paint(f"Tope del ciclo: {money(budget.cycle_cap(cfg, home, now))}. Se registran cuando te los "
+                       f"otorgan y terminan con el ciclo.", MUTED)]
+    out += card("Extras del plan (ciclo)", rows, size, paint)
+
     budgets = cfg["model_budgets"]
     if budgets:
         width = max(len(p) for p in budgets) + 2
