@@ -169,7 +169,7 @@ def limits_command(args) -> int:
         elif args.action == "check":
             cfg = budget.config()
             problems = budget.check_limits(cfg, budget.known_models(budget.read_ledger()),
-                                           budget.cycle_cap(cfg, budget.HOME, time.time()))
+                                           budget.cycle_cap(cfg, budget.HOME, time.time()), home=budget.HOME)
             for lvl, msg in problems:
                 print(f"{lvl}: {msg}")
             print("ok" if not problems else f"{len(problems)} problema(s)")

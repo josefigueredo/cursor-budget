@@ -63,7 +63,7 @@ def show(home: Path = budget.HOME, color: bool = False, now: Optional[float] = N
     blocked = cfg["blocked_models"]
     out += card("Modelos bloqueados", [paint(", ".join(blocked) if blocked else "Ninguno", TEXT)], size, paint)
 
-    problems = budget.check_limits(cfg, budget.known_models(ledger, home), budget.cycle_cap(cfg, home, now))
+    problems = budget.check_limits(cfg, budget.known_models(ledger, home), budget.cycle_cap(cfg, home, now), home=home)
     rows = [paint("● ", RED if lvl == "error" else AMBER) + paint(msg, TEXT) for lvl, msg in problems] or \
         [paint("● ", GREEN) + paint("Sin problemas: los límites son coherentes entre sí.", TEXT)]
     out += card("Chequeo", rows, size, paint)

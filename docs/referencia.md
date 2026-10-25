@@ -146,6 +146,7 @@ Todo vive en `~/.cursor/budget/`, fuera de cualquier repo:
 | `extras.json` | Los extras registrados en el ciclo actual | `extra` |
 | `update.json` | Cuándo se buscó una versión nueva, qué encontró y de cuál ya avisó | el hook `stop` y `update-check` |
 | `app/VERSION` | El commit instalado | `install.sh` |
+| `.lock` | Vacío: ordena a los hooks y comandos que escriben al mismo tiempo (varias ventanas o agentes) | todos |
 | `app/vscode/` | El `.vsix` de la extensión que se instaló en Cursor | `install.sh` |
 | `allow.json` | Hasta cuándo están levantados los bloqueos | `allow` |
 | `prices.json` | Opcional: tu propia tabla de precios, con prioridad sobre `app/cbudget/prices.json` | vos |
@@ -202,6 +203,10 @@ editá esa copia: el instalador no la pisa.
   defecto; un presupuesto `auto*` sí lo frena al agotarse.
 - El total es una estimación: el tope real del ciclo lo pone Cursor.
 - Si el hook falla, deja pasar el prompt (falla abierto) para no romper Cursor.
+- Si `config.json` no se puede leer, o un valor tiene el tipo equivocado (`"block_day": "15"`), rige el valor por
+  defecto y `cbudget limits check` lo marca como error. Ningún comando lo reescribe hasta que lo arregles.
+- Los turnos que terminan a la vez (varias ventanas o agentes) se registran de a uno: cada aviso sale una sola vez.
+- Si el día del ciclo no existe en un mes (un 31 en febrero), el ciclo arranca el último día de ese mes.
 - Los hooks y el alias corren con `/usr/bin/python3`, el de macOS: un python de Homebrew desaparece con un
   `brew upgrade` y el hook dejaría de correr sin avisar. Por eso la instalación pide las Command Line Tools.
 - La app de Cursor no muestra en el chat ningún texto informativo de un hook, solo el motivo de un bloqueo: los avisos
