@@ -13,8 +13,8 @@
   },
   "skill": {
     "repo": "cursor-budget",
-    "commit": "a28b6b2",
-    "date": "2026-10-24"
+    "commit": "b049a08",
+    "date": "2026-10-25"
   },
   "workspace": {
     "repo": "mi-servicio",
@@ -161,7 +161,7 @@
       "steps": [
         {
           "type": "ask",
-          "text": "Cursor dice que llevo 84,30 de 200 este mes",
+          "text": "Cursor dice que llevo 84,30 de 150 este mes",
           "source": "inferido",
           "notes": "Primero le contamos lo que ya gastamos: el hook cuenta desde que lo instalaste y no sabe lo de antes. El número sale de cursor.com/dashboard, en Usage, «Your monthly usage»."
         },
@@ -189,24 +189,24 @@
         },
         {
           "type": "term",
-          "cmd": "python3 ~/.cursor/budget/app/cbudget.py limits set cycle_limit 200",
+          "cmd": "python3 ~/.cursor/budget/app/cbudget.py limits set cycle_limit 150",
           "out": [
-            "cycle_limit = $200.00"
+            "cycle_limit = $150.00"
           ],
           "source": "real",
           "cwd": "~/mi-servicio",
           "callouts": [
             {
               "kind": "note",
-              "text": "**El tope del plan** lo dijiste vos («de 200»): por eso lo cambia."
+              "text": "**El tope del plan** lo dijiste vos («de 150»): por eso lo deja escrito."
             }
           ],
-          "notes": "El segundo número era el tope del plan. Viene en 225 por defecto; como el usuario lo dijo, la skill lo ajusta. La skill solo cambia lo que le pedís.",
+          "notes": "El segundo número era el tope del plan. Coincide con el que trae por defecto ($150), pero como el usuario lo dijo, la skill lo fija igual. La skill solo cambia lo que le pedís.",
           "color": true
         },
         {
           "type": "say",
-          "md": "Listo: el ciclo arranca en **$84.30 de $200**, desde el 1 de octubre. Desde ahora sumo lo que estimen los hooks en cada turno.",
+          "md": "Listo: el ciclo arranca en **$84.30 de $150**, desde el 1 de octubre. Desde ahora sumo lo que estimen los hooks en cada turno.",
           "source": "inferido",
           "notes": "Cerrá la idea: Cursor cobra, el hook estima. Con el seed, los dos números arrancan iguales."
         },
@@ -262,7 +262,7 @@
         },
         {
           "type": "say",
-          "md": "**Ciclo:** $84.85 / $200: te quedan **$115.15** y 8 días (se reinicia el 1 de nov). Hoy: $0.55.\n\n**Límites activos:** aviso chat $2 / bloqueo $5 · aviso día $8 / bloqueo $15 · Opus high, xhigh y max bloqueados. Chequeo: sin problemas.\n\nEl total mezcla lo que decía Cursor más lo estimado por los hooks desde entonces.",
+          "md": "**Ciclo:** $84.85 / $150: te quedan **$65.15** y 8 días (se reinicia el 1 de nov). Hoy: $0.55.\n\n**Límites activos:** aviso chat $2 / bloqueo $5 · aviso día $8 / bloqueo $15 · Opus high, xhigh y max bloqueados. Chequeo: sin problemas.\n\nEl total mezcla lo que decía Cursor más lo estimado por los hooks desde entonces.",
           "source": "inferido",
           "callouts": [
             {
@@ -354,14 +354,14 @@
             " \u001b[1;38;2;236;236;236mUso de Cursor\u001b[0m",
             "\u001b[38;2;58;58;58m╭────────────────────────────────────────────────────────────────────────────────────────────────────────────╮\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mUso del ciclo\u001b[0m                                                                                              \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[1;38;2;236;236;236m$84.85\u001b[0m\u001b[38;2;140;140;140m / $200.00\u001b[0m                                                                                           \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;122;162;204m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[38;2;48;48;48m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[1;38;2;236;236;236m$84.85\u001b[0m\u001b[38;2;140;140;140m / $150.00\u001b[0m                                                                                           \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;122;162;204m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[38;2;48;48;48m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mSe reinicia el 1 de nov de 2026  ·  Quedan 7 días\u001b[0m                                                          \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mLo que mostraba Cursor al cargarlo, más lo estimado desde entonces.\u001b[0m                                        \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
             "\u001b[38;2;58;58;58m╭─────────────────────────────────╮\u001b[0m  \u001b[38;2;58;58;58m╭─────────────────────────────────╮\u001b[0m  \u001b[38;2;58;58;58m╭──────────────────────────────────╮\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mTotal del ciclo\u001b[0m                 \u001b[38;2;58;58;58m│\u001b[0m  \u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mDisponible\u001b[0m                      \u001b[38;2;58;58;58m│\u001b[0m  \u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mHoy\u001b[0m                              \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[1;38;2;236;236;236m$84.85\u001b[0m                          \u001b[38;2;58;58;58m│\u001b[0m  \u001b[38;2;58;58;58m│\u001b[0m \u001b[1;38;2;22;160;92m$115.15\u001b[0m                         \u001b[38;2;58;58;58m│\u001b[0m  \u001b[38;2;58;58;58m│\u001b[0m \u001b[1;38;2;236;236;236m$0.55\u001b[0m                            \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[1;38;2;236;236;236m$84.85\u001b[0m                          \u001b[38;2;58;58;58m│\u001b[0m  \u001b[38;2;58;58;58m│\u001b[0m \u001b[1;38;2;22;160;92m$65.15\u001b[0m                          \u001b[38;2;58;58;58m│\u001b[0m  \u001b[38;2;58;58;58m│\u001b[0m \u001b[1;38;2;236;236;236m$0.55\u001b[0m                            \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m╰─────────────────────────────────╯\u001b[0m  \u001b[38;2;58;58;58m╰─────────────────────────────────╯\u001b[0m  \u001b[38;2;58;58;58m╰──────────────────────────────────╯\u001b[0m",
             "\u001b[38;2;58;58;58m╭────────────────────────────────────────────────────────────────────────────────────────────────────────────╮\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mUso por día\u001b[0m                                                                                                \u001b[38;2;58;58;58m│\u001b[0m",
@@ -374,9 +374,9 @@
             "\u001b[38;2;58;58;58m╭────────────────────────────────────────────────────────────────────────────────────────────────────────────╮\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mÚltimos turnos (último día)\u001b[0m                                                                                \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mFecha            Modelo                    Chat         Tokens     Costo\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 00:07  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   186.0K\u001b[0m\u001b[38;2;236;236;236m     $0.18\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 00:07  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   269.0K\u001b[0m\u001b[38;2;236;236;236m     $0.22\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 00:07  \u001b[0m\u001b[38;2;246;196;120m● \u001b[0m\u001b[38;2;236;236;236mauto-smart\u001b[0m                \u001b[38;2;140;140;140mb2        \u001b[0m\u001b[38;2;236;236;236m   124.0K\u001b[0m\u001b[38;2;236;236;236m     $0.15\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 11:07  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   186.0K\u001b[0m\u001b[38;2;236;236;236m     $0.18\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 11:07  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   269.0K\u001b[0m\u001b[38;2;236;236;236m     $0.22\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 11:07  \u001b[0m\u001b[38;2;246;196;120m● \u001b[0m\u001b[38;2;236;236;236mauto-smart\u001b[0m                \u001b[38;2;140;140;140mb2        \u001b[0m\u001b[38;2;236;236;236m   124.0K\u001b[0m\u001b[38;2;236;236;236m     $0.15\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
             ""
           ],
@@ -385,7 +385,7 @@
           "callouts": [
             {
               "kind": "underline",
-              "match": "$115.15"
+              "match": "$65.15"
             },
             {
               "kind": "note",
@@ -408,7 +408,7 @@
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236mblock_conversation\u001b[0m    \u001b[1;38;2;236;236;236m     $5.00\u001b[0m   \u001b[38;2;140;140;140mBloquea un chat que llegó a este monto\u001b[0m                        \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236mwarn_day\u001b[0m              \u001b[1;38;2;236;236;236m     $8.00\u001b[0m   \u001b[38;2;140;140;140mAvisa cuando el día pasa este monto\u001b[0m                           \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236mblock_day\u001b[0m             \u001b[1;38;2;236;236;236m    $12.00\u001b[0m\u001b[38;2;246;196;120m *\u001b[0m \u001b[38;2;140;140;140mBloquea el resto del día al llegar a este monto\u001b[0m               \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236mcycle_limit\u001b[0m           \u001b[1;38;2;236;236;236m   $200.00\u001b[0m\u001b[38;2;246;196;120m *\u001b[0m \u001b[38;2;140;140;140mTope del plan en el ciclo\u001b[0m                                     \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236mcycle_limit\u001b[0m           \u001b[1;38;2;236;236;236m   $150.00\u001b[0m\u001b[38;2;246;196;120m *\u001b[0m \u001b[38;2;140;140;140mTope del plan en el ciclo\u001b[0m                                     \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236mcycle_day\u001b[0m             \u001b[1;38;2;236;236;236m         1\u001b[0m   \u001b[38;2;140;140;140mDía del mes en que se reinicia el ciclo\u001b[0m                       \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236mmodel_warn\u001b[0m            \u001b[1;38;2;236;236;236m       80%\u001b[0m   \u001b[38;2;140;140;140mParte del presupuesto de un modelo que dispara el aviso\u001b[0m       \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236mnotify_each_turn\u001b[0m      \u001b[1;38;2;236;236;236m        sí\u001b[0m   \u001b[38;2;140;140;140mNotificación después de cada turno\u001b[0m                            \u001b[38;2;58;58;58m│\u001b[0m",
@@ -488,7 +488,7 @@
           "type": "term",
           "cmd": "tail -n 1 ~/.cursor/budget/blocks.jsonl",
           "out": [
-            "{\"t\": 1792897669, \"conversation_id\": \"c1\", \"model\": \"claude-opus-5-5-high\", \"reason\": \"el modelo claude-opus-5-5-high está bloqueado; elegí otro o corré `cbudget allow`\"}"
+            "{\"t\": 1792937263, \"conversation_id\": \"c1\", \"model\": \"claude-opus-5-5-high\", \"reason\": \"el modelo claude-opus-5-5-high está bloqueado; elegí otro o corré `cbudget allow`\"}"
           ],
           "source": "real",
           "cwd": "~",
@@ -498,7 +498,7 @@
           "type": "term",
           "cmd": "python3 ~/.cursor/budget/app/cbudget.py allow --minutes 30",
           "out": [
-            "bloqueos levantados hasta las 00:37"
+            "bloqueos levantados hasta las 11:37"
           ],
           "source": "real",
           "cwd": "~",
