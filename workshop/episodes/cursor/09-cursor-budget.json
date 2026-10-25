@@ -13,7 +13,7 @@
   },
   "skill": {
     "repo": "cursor-budget",
-    "commit": "0530a0a",
+    "commit": "867540e",
     "date": "2026-10-25"
   },
   "workspace": {
@@ -70,28 +70,7 @@
             "Listo. Abrí una terminal nueva y probá: cbudget report"
           ],
           "source": "inferido",
-          "callouts": [
-            {
-              "kind": "box",
-              "match": "hook instalado",
-              "text": "dos hooks globales de Cursor"
-            },
-            {
-              "kind": "box",
-              "match": "statusLine de cursor-agent apuntada a cbudget",
-              "text": "el pie de cursor-agent"
-            },
-            {
-              "kind": "box",
-              "match": "extensión de Cursor instalada",
-              "text": "la barra del editor"
-            },
-            {
-              "kind": "box",
-              "match": "Mandé una notificación de prueba.",
-              "text": "¿la viste?"
-            }
-          ],
+          "callouts": [],
           "notes": "Una sola línea; gh pone tu sesión porque el repo es interno. Copia el programa, suma dos hooks a Cursor sin tocar los tuyos, agrega el alias y la skill, e instala la barra del editor y el pie de cursor-agent: nada aparte. Preguntá si vieron la notificación de prueba. Paso inferido: necesita red; la salida es la del instalador real."
         },
         {
@@ -674,11 +653,6 @@
             {
               "kind": "note",
               "text": "**Llegó el aviso de versión nueva.** Esto mismo hace el agente si le decís «actualizá cursor-budget»."
-            },
-            {
-              "kind": "box",
-              "match": "el hook ya estaba instalado",
-              "text": "tus límites y tu registro no se tocan"
             }
           ]
         },
