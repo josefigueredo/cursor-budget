@@ -119,6 +119,18 @@ instalador la deja como estaba. Ese archivo también guarda la sesión de cursor
 JSON válido no se toca), se conservan todas las demás claves y sus permisos. Si había una sesión de cursor-agent
 abierta, cerrala y volvé a abrirla; si al cerrarse pisó el archivo, `cbudget statusline install` la vuelve a poner.
 
+## La barra de estado de Cursor
+
+La app de Cursor no deja que un hook escriba en el chat, así que el gasto va en la barra de estado, abajo a la
+derecha: `hoy $3.20 de $15 · ciclo $84 de $150`. Se pone amarilla al pasar `warn_day` o el primer aviso del ciclo
+(75%), y roja al llegar a `block_day` o al tope del ciclo. Un clic abre el reporte. Se actualiza cada 10 segundos y
+apenas se registra un turno.
+
+Es una extensión chica que vive en `vscode/` del repo. `install.sh` la arma (un `.vsix`, sin node) y la instala con
+`cursor --install-extension`. Si tu organización solo permite extensiones aprobadas y la rechaza, la instalación
+sigue igual y te dice dónde quedó el `.vsix` para instalarlo a mano (**Extensions: Install from VSIX…**). Si no
+aparece, corré **Developer: Reload Window**.
+
 ## Archivos
 
 Todo vive en `~/.cursor/budget/`, fuera de cualquier repo:
@@ -134,6 +146,7 @@ Todo vive en `~/.cursor/budget/`, fuera de cualquier repo:
 | `extras.json` | Los extras registrados en el ciclo actual | `extra` |
 | `update.json` | Cuándo se buscó una versión nueva, qué encontró y de cuál ya avisó | el hook `stop` y `update-check` |
 | `app/VERSION` | El commit instalado | `install.sh` |
+| `app/vscode/` | El `.vsix` de la extensión que se instaló en Cursor | `install.sh` |
 | `allow.json` | Hasta cuándo están levantados los bloqueos | `allow` |
 | `prices.json` | Opcional: tu propia tabla de precios, con prioridad sobre `app/cbudget/prices.json` | vos |
 
@@ -192,6 +205,6 @@ editá esa copia: el instalador no la pisa.
 - Los hooks y el alias corren con `/usr/bin/python3`, el de macOS: un python de Homebrew desaparece con un
   `brew upgrade` y el hook dejaría de correr sin avisar. Por eso la instalación pide las Command Line Tools.
 - La app de Cursor no muestra en el chat ningún texto informativo de un hook, solo el motivo de un bloqueo: los avisos
-  llegan como notificaciones de macOS. El pie con el gasto existe solo en cursor-agent.
+  llegan como notificaciones de macOS. El gasto se ve en la barra de estado (la extensión) y en el pie de cursor-agent.
 - No es seguridad: quien usa la máquina puede editar `config.json` o correr `allow`. Es un freno para uno mismo.
 - Los precios marcados `estimate` en `prices.json` no están verificados.

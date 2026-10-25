@@ -231,6 +231,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     sub.add_parser("notify-test", help="send a test notification, to check that macOS shows them")
     stl = sub.add_parser("statusline", help="cursor-agent's footer: print the line (stdin: its JSON), or install it")
     stl.add_argument("action", nargs="?", choices=("install", "remove"))
+    stl.add_argument("--json", action="store_true", help="the numbers as JSON (Cursor's status bar extension)")
     sub.add_parser("version", help="the installed commit and whether a newer one exists")
     sub.add_parser("update", help="install the latest version from GitHub (keeps limits, ledger and seed)")
     sub.add_parser("update-check", help="compare the install with GitHub once and notify a newer version")
@@ -287,6 +288,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(NOTIFY_HINT)
         return 0
     if args.cmd == "statusline":
+        if args.json:
+            print(json.dumps(statusline.summary()))
+            return 0
         return statusline_command(args.action)
     if args.cmd == "version":
         sha, known = update.installed(APP), update.state(budget.HOME)

@@ -8,14 +8,15 @@
 # Re-running updates the copy; config.json, ledger.jsonl, baseline.json and changes.jsonl are never touched.
 # The hooks and the alias run with macOS's /usr/bin/python3, which outlives Homebrew upgrades. The installed commit goes
 # to app/VERSION, so a daily check can say when a newer one exists. cursor-agent's footer shows the spend
-# (statusLine in ~/.cursor/cli-config.json), unless it already has a status line of its own.
+# (statusLine in ~/.cursor/cli-config.json), unless it already has a status line of its own, and Cursor's app shows it
+# in the status bar (the extension in vscode/, built here and installed with `cursor --install-extension`).
 # Ends with a test notification, since every warning arrives as one (CURSOR_BUDGET_NO_NOTIFY=1 skips it).
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEST="${CURSOR_BUDGET_HOME:-$HOME/.cursor/budget}/app"
 case "${1:-}" in
-  -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+  -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
   "") ;;
   *) echo "unknown argument: $1" >&2; exit 2 ;;
 esac
@@ -60,6 +61,17 @@ for host in .claude .codex; do
   link "../../.agents/skills/cursor-budget" "$HOME/$host/skills/cursor-budget" || status=1
 done
 echo "skill: cursor-budget (Cursor, Claude Code, Codex) -> $DEST"
+# Cursor's status bar: optional too, since an organization may allow only approved extensions
+CURSOR_CLI="$(command -v cursor || true)"
+[ -n "$CURSOR_CLI" ] || CURSOR_CLI="/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
+if [ -x "$CURSOR_CLI" ]; then
+  VSIX="$("$PY" "$REPO/vscode/build_vsix.py" "$DEST/vscode")"
+  if "$CURSOR_CLI" --install-extension "$VSIX" --force >/dev/null 2>&1; then
+    echo "extensión de Cursor instalada: el gasto aparece en la barra de estado (si no, Developer: Reload Window)"
+  else
+    echo "(no pude instalar la extensión de Cursor; podés hacerlo a mano con Extensions: Install from VSIX… y $VSIX)"
+  fi
+fi
 # the warnings arrive as macOS notifications; one now shows whether they are allowed (CURSOR_BUDGET_NO_NOTIFY=1 skips it)
 if [ "$(uname)" = Darwin ] && [ -z "${CURSOR_BUDGET_NO_NOTIFY:-}" ]; then
   "$PY" "$DEST/cbudget.py" notify-test || status=1

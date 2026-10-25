@@ -17,19 +17,26 @@ CLI_CONFIG = Path.home() / ".cursor" / "cli-config.json"
 INTERVAL_MS = 5000  # the line reads the ledger; every 5 s is enough for a spend that changes once per turn
 
 
+def summary(home: Path = budget.HOME, now: Callable[[], float] = time.time) -> dict:
+    """Today's and the cycle's spend with the limits they are compared with (also for Cursor's status bar)."""
+    cfg, t = budget.config(home), now()
+    entries = budget.read_ledger(home)
+    _, today = budget.totals(entries, None, budget.day(t))
+    cycle, _ = budget.cycle_total(entries, home, t, cfg["cycle_day"])
+    return {"today": today, "warn_day": float(cfg["warn_day"]), "block_day": float(cfg["block_day"]),
+            "cycle": cycle, "cap": budget.cycle_cap(cfg, home, t), "cycle_warn": float(min(cfg["cycle_warn"]))}
+
+
 def line(payload: dict, home: Path = budget.HOME, now: Callable[[], float] = time.time) -> str:
     model = ((payload or {}).get("model") or {}).get("display_name") or "cursor-budget"
     try:
-        cfg, t = budget.config(home), now()
-        entries = budget.read_ledger(home)
-        _, today = budget.totals(entries, None, budget.day(t))
-        cycle, _ = budget.cycle_total(entries, home, t, cfg["cycle_day"])
+        s = summary(home, now)
         parts = [model]
         used = ((payload or {}).get("context_window") or {}).get("used_percentage")
         if used is not None:
             parts.append(f"contexto {float(used):.0f}%")
-        parts.append(f"hoy ${today:.2f} de ${float(cfg['block_day']):.0f}")
-        parts.append(f"ciclo ${cycle:.2f} de ${budget.cycle_cap(cfg, home, t):.0f}")
+        parts.append(f"hoy ${s['today']:.2f} de ${s['block_day']:.0f}")
+        parts.append(f"ciclo ${s['cycle']:.2f} de ${s['cap']:.0f}")
         return " · ".join(parts)
     except Exception:  # noqa: BLE001 - the footer must always show something
         return model

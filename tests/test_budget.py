@@ -737,5 +737,53 @@ class TestStatusline(Home):
         self.assertFalse(statusline.remove(path))
 
 
+class TestCursorExtension(Home):
+    """The status bar item of Cursor's app: a .vsix built with no dependencies, fed by `cbudget statusline --json`."""
+    ROOT = Path(__file__).resolve().parent.parent
+
+    def test_summary_has_the_numbers_the_status_bar_paints(self):
+        from cbudget import statusline
+        self.run_stop(stop(input_tokens=1_000_000))
+        s = statusline.summary(home=self.home, now=lambda: NOON)
+        self.assertEqual(set(s), {"today", "warn_day", "block_day", "cycle", "cap", "cycle_warn"})
+        self.assertAlmostEqual(s["today"], 2.25, places=2)
+        self.assertEqual((s["warn_day"], s["block_day"], s["cap"], s["cycle_warn"]), (8.0, 15.0, 150.0, 0.75))
+
+    def test_the_vsix_holds_a_manifest_that_matches_its_package(self):
+        import sys, zipfile
+        sys.path.insert(0, str(self.ROOT / "vscode"))
+        try:
+            import build_vsix
+        finally:
+            sys.path.pop(0)
+        vsix = build_vsix.build(self.home)
+        package = json.loads((self.ROOT / "vscode" / "package.json").read_text(encoding="utf-8"))
+        self.assertEqual(vsix.name, f"cursor-budget-{package['version']}.vsix")
+        with zipfile.ZipFile(vsix) as z:
+            names = set(z.namelist())
+            manifest = z.read("extension.vsixmanifest").decode("utf-8")
+        for name in ("[Content_Types].xml", "extension.vsixmanifest", "extension/package.json",
+                     "extension/extension.js", "extension/format.js"):
+            self.assertIn(name, names)
+        self.assertIn(f'Version="{package["version"]}"', manifest)
+        self.assertIn(f'Publisher="{package["publisher"]}"', manifest)
+        self.assertEqual(package["extensionKind"], ["ui"])  # the budget lives on this Mac, also in a remote window
+
+    def test_the_status_bar_label_turns_yellow_at_a_warning_and_red_at_a_block(self):
+        import shutil, subprocess
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not installed")
+        base = {"today": 3.2, "warn_day": 8, "block_day": 15, "cycle": 84.1, "cap": 150, "cycle_warn": 0.75}
+        cases = [base, {**base, "today": 9}, {**base, "today": 15}, {**base, "cycle": 120}, {**base, "cycle": 150}]
+        script = ("const f=require(process.argv[1]);"
+                  "console.log(JSON.stringify(JSON.parse(process.argv[2]).map(f.label)))")
+        out = subprocess.run([node, "-e", script, str(self.ROOT / "vscode" / "format.js"), json.dumps(cases)],
+                             capture_output=True, text=True, check=True).stdout
+        labels = json.loads(out)
+        self.assertEqual(labels[0]["text"], "$(pulse) hoy $3.20 de $15 · ciclo $84 de $150")
+        self.assertEqual([lb["level"] for lb in labels], ["ok", "warning", "error", "warning", "error"])
+
+
 if __name__ == "__main__":
     unittest.main()
