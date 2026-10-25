@@ -1,0 +1,7 @@
+# Maqueta: el pie de cursor-agent con la statusLine de cursor-budget, tal como se vio en un turno real del 2026-10-25 (otros montos)
+› revisá el módulo de pagos
+
+  Revisé src/pagos: el servicio mezcla validación y acceso a datos…
+
+→ Add a follow-up
+Sonnet 5.5 · contexto 34% · hoy $3.20 de $15 · ciclo $84.10 de $150

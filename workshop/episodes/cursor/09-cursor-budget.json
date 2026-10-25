@@ -13,7 +13,7 @@
   },
   "skill": {
     "repo": "cursor-budget",
-    "commit": "a111d8b",
+    "commit": "ffda72f",
     "date": "2026-10-25"
   },
   "workspace": {
@@ -90,6 +90,7 @@
             "hook instalado",
             "alias agregado en ~/.zshrc; abrí otra terminal o corré: source ~/.zshrc",
             "skill: cursor-budget (Cursor, Claude Code, Codex) -> ~/.cursor/budget/app",
+            "extensión de Cursor instalada: el gasto aparece en la barra de estado (si no, Developer: Reload Window)",
             "Mandé una notificación de prueba. Si no la viste, los avisos no te van a llegar: abrí Configuración del Sistema → Notificaciones → Script Editor, activá «Permitir notificaciones» y probá de nuevo con `cbudget notify-test`."
           ],
           "source": "real",
@@ -105,13 +106,13 @@
             "    \"hooks\": {",
             "        \"stop\": [",
             "            {",
-            "                \"command\": \"/opt/homebrew/opt/python@3.13/bin/python3.13 ~/.cursor/budget/app/cbudget.py hook\",",
+            "                \"command\": \"/usr/bin/python3 ~/.cursor/budget/app/cbudget.py hook\",",
             "                \"timeout\": 10",
             "            }",
             "        ],",
             "        \"beforeSubmitPrompt\": [",
             "            {",
-            "                \"command\": \"/opt/homebrew/opt/python@3.13/bin/python3.13 ~/.cursor/budget/app/cbudget.py hook\",",
+            "                \"command\": \"/usr/bin/python3 ~/.cursor/budget/app/cbudget.py hook\",",
             "                \"timeout\": 10",
             "            }",
             "        ]",
@@ -278,6 +279,19 @@
           "capture_only": true
         },
         {
+          "type": "page",
+          "title": "Cursor — barra de estado",
+          "src": "pages/cursor-budget-barra.html",
+          "source": "inferido",
+          "callouts": [
+            {
+              "kind": "note",
+              "text": "**Siempre a la vista.** Abajo a la derecha: lo de hoy y lo del ciclo. Amarillo cerca de un aviso, rojo en un bloqueo."
+            }
+          ],
+          "notes": "Esto lo instala cursor-budget solo: una extensión chica en la barra de estado de Cursor. Muestra lo que gastaste hoy contra el tope diario, y lo del ciclo contra el tope del plan. Se pone amarilla cuando pasás un aviso y roja cuando llegás a un bloqueo. Un clic abre el reporte. Si recién lo instalaste y no la ves, recargá la ventana."
+        },
+        {
           "type": "ask",
           "text": "Mostrame mis settings y explicame cada una",
           "source": "inferido",
@@ -430,7 +444,7 @@
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140m03 oct  \u001b[0m\u001b[38;2;62;152;255m█████████████████████████████████████████████████████████████████████\u001b[0m                  \u001b[38;2;236;236;236m      $7.20\u001b[0m \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140m05 oct  \u001b[0m\u001b[38;2;62;152;255m██████████████████████████████████████████████████████\u001b[0m                                 \u001b[38;2;236;236;236m      $5.60\u001b[0m \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140m06 oct  \u001b[0m\u001b[38;2;62;152;255m██████████████████████████████████████████████\u001b[0m                                         \u001b[38;2;236;236;236m      $4.80\u001b[0m \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140m07 oct  \u001b[0m\u001b[38;2;62;152;255m████████████████████████████████████████████████\u001b[0m                                       \u001b[38;2;236;236;236m      $5.00\u001b[0m \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140m08 oct  \u001b[0m\u001b[38;2;62;152;255m████████████████████████████████████████████████\u001b[0m                                       \u001b[38;2;236;236;236m      $5.00\u001b[0m \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140m09 oct  \u001b[0m\u001b[38;2;110;224;208m████████████████████████████████████████████████████████████\u001b[0m                           \u001b[38;2;236;236;236m      $6.30\u001b[0m \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140m10 oct  \u001b[0m\u001b[38;2;110;224;208m█████████████████████████████████████████████████\u001b[0m                                      \u001b[38;2;236;236;236m      $5.10\u001b[0m \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140m12 oct  \u001b[0m\u001b[38;2;110;224;208m███████████████████████████████████████████████\u001b[0m                                        \u001b[38;2;236;236;236m      $4.90\u001b[0m \u001b[38;2;58;58;58m│\u001b[0m",
@@ -451,9 +465,9 @@
             "\u001b[38;2;58;58;58m╭────────────────────────────────────────────────────────────────────────────────────────────────────────────╮\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mÚltimos turnos (último día)\u001b[0m                                                                                \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mFecha            Modelo                    Chat         Tokens     Costo\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 11:39  \u001b[0m\u001b[38;2;246;196;120m● \u001b[0m\u001b[38;2;236;236;236mauto-smart\u001b[0m                \u001b[38;2;140;140;140mb2        \u001b[0m\u001b[38;2;236;236;236m   124.0K\u001b[0m\u001b[38;2;236;236;236m     $0.15\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 11:39  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   186.0K\u001b[0m\u001b[38;2;236;236;236m     $0.18\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 11:39  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   268.0K\u001b[0m\u001b[38;2;236;236;236m     $0.23\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 17:03  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   268.0K\u001b[0m\u001b[38;2;236;236;236m     $0.23\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 17:03  \u001b[0m\u001b[38;2;246;196;120m● \u001b[0m\u001b[38;2;236;236;236mauto-smart\u001b[0m                \u001b[38;2;140;140;140mb2        \u001b[0m\u001b[38;2;236;236;236m   124.0K\u001b[0m\u001b[38;2;236;236;236m     $0.15\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 17:03  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   186.0K\u001b[0m\u001b[38;2;236;236;236m     $0.18\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
             ""
           ],
@@ -546,9 +560,41 @@
         },
         {
           "type": "term",
+          "cmd": "echo '{\"model\":{\"display_name\":\"Sonnet 5.5\"},\"context_window\":{\"used_percentage\":34}}' | python3 ~/.cursor/budget/app/cbudget.py statusline",
+          "out": [
+            "Sonnet 5.5 · contexto 34% · hoy $0.56 de $17 · ciclo $84.86 de $150"
+          ],
+          "source": "real",
+          "cwd": "~",
+          "notes": "Si usás Cursor en la terminal, con cursor-agent, esta línea queda en el pie: el modelo, cuánto del contexto usaste y el mismo gasto de la barra. La pone el instalador; acá la pedimos a mano para verla.",
+          "callouts": [
+            {
+              "kind": "note",
+              "text": "**El pie de cursor-agent.** Esta misma línea queda abajo de todo cuando usás Cursor en la terminal."
+            }
+          ]
+        },
+        {
+          "type": "term",
+          "cmd": "python3 ~/.cursor/budget/app/cbudget.py version",
+          "out": [
+            "instalado: ffda72f"
+          ],
+          "source": "real",
+          "cwd": "~",
+          "notes": "cursor-budget sabe qué versión tenés. Una vez por día se fija si hay una nueva y, si la hay, te manda una notificación una sola vez. Para actualizar le decís al agente: actualizá cursor-budget.",
+          "callouts": [
+            {
+              "kind": "note",
+              "text": "**Te avisa cuando sale una versión nueva.** Para actualizar: «actualizá cursor-budget»."
+            }
+          ]
+        },
+        {
+          "type": "term",
           "cmd": "python3 ~/.cursor/budget/app/cbudget.py allow --minutes 30",
           "out": [
-            "bloqueos levantados hasta las 12:09"
+            "bloqueos levantados hasta las 17:33"
           ],
           "source": "real",
           "cwd": "~",
@@ -613,7 +659,7 @@
           "type": "term",
           "cmd": "tail -n 1 ~/.cursor/budget/blocks.jsonl",
           "out": [
-            "{\"t\": 1792939161, \"conversation_id\": \"c1\", \"model\": \"claude-opus-5-5-high\", \"reason\": \"el modelo claude-opus-5-5-high está bloqueado; elegí otro o corré `cbudget allow`\"}"
+            "{\"t\": 1792958594, \"conversation_id\": \"c1\", \"model\": \"claude-opus-5-5-high\", \"reason\": \"el modelo claude-opus-5-5-high está bloqueado; elegí otro o corré `cbudget allow`\"}"
           ],
           "source": "real",
           "cwd": "~",
@@ -623,7 +669,7 @@
           "type": "term",
           "cmd": "python3 ~/.cursor/budget/app/cbudget.py allow --minutes 30",
           "out": [
-            "bloqueos levantados hasta las 12:09"
+            "bloqueos levantados hasta las 17:33"
           ],
           "source": "real",
           "cwd": "~",

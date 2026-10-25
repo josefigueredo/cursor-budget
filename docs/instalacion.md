@@ -15,10 +15,11 @@ Después decile:
 
 El agente baja el instalador del repo y lo corre. Copia el programa a `~/.cursor/budget/app`, suma los dos hooks a
 `~/.cursor/hooks.json` sin tocar los que ya tenías, agrega el alias `cbudget` a tu `~/.zshrc` y deja la skill a mano de
-Cursor, Claude Code y Codex. Desde Cursor, el agente puede pedirte permiso para correrlo fuera del sandbox, porque
-escribe en tu carpeta personal: aceptalo.
+Cursor, Claude Code y Codex. También instala una extensión chica en Cursor para ver el gasto en la barra de estado, y
+pone el gasto en el pie de cursor-agent si lo usás (paso 5). Desde Cursor, el agente puede pedirte permiso para correrlo
+fuera del sandbox, porque escribe en tu carpeta personal: aceptalo.
 
-Para que los hooks y la skill se carguen, **cerrá Cursor y abrilo de nuevo** (o abrí un chat nuevo).
+Para que los hooks, la skill y la extensión se carguen, **cerrá Cursor y abrilo de nuevo**.
 
 Si ya tenés el repo clonado, también sirve: *«Instalá cursor-budget desde ~/ruta/al/repo con ./install.sh»*.
 
@@ -64,7 +65,31 @@ después te dan el extra excepcional, otros $75. El aviso del 100% te recuerda c
 Para el reporte completo, con el gasto por día y los últimos turnos, en una terminal: `cbudget report` (es el ejemplo del
 [README](../README.md#un-ejemplo-el-reporte)).
 
-## 5. Cambiar un límite
+## 5. Ver el gasto mientras trabajás
+
+No hace falta preguntar: el gasto está siempre a la vista.
+
+**En Cursor**, abajo a la derecha, en la barra de estado:
+
+![Barra de estado de Cursor con el gasto de hoy y del ciclo, y cómo se pinta en amarillo y en rojo](img/cursor-barra.png)
+
+*Maqueta: la ventana es aproximada; el texto y los colores son los que pone la extensión.*
+
+- **hoy** es lo que gastaste en el día, al lado del tope diario (`block_day`).
+- **ciclo** es lo que llevás del mes de facturación, al lado del tope del plan más los extras que te otorgaron.
+- Se pone **amarilla** cuando pasás un aviso (el del día, o el 75% del ciclo) y **roja** cuando llegás a un bloqueo o
+  al tope del ciclo.
+- Un clic abre el reporte completo.
+
+**En cursor-agent** (Cursor en la terminal), el pie muestra el modelo, cuánto del contexto usaste y el mismo gasto:
+
+![Pie de cursor-agent con el modelo, el contexto y el gasto de hoy y del ciclo](img/agent-pie.png)
+
+*Maqueta del pie que se vio en un turno real de cursor-agent del 2026-10-25, con otros montos.*
+
+Si ya tenías tu propio pie en cursor-agent, el instalador no lo toca.
+
+## 6. Cambiar un límite
 
 Pedí el cambio con el valor que querés:
 
@@ -81,7 +106,7 @@ Pedí el cambio con el valor que querés:
 El agente cambia ese límite, revisa que los límites sigan siendo coherentes y te dice el valor de antes y el nuevo. Te
 llega una notificación con cada cambio, aunque lo haya hecho el agente.
 
-## 6. Cuando te frena
+## 7. Cuando te frena
 
 Si un prompt usa un modelo bloqueado (por defecto, Opus High y todo lo `xhigh` o `max`), o un chat, el día o el
 presupuesto de un modelo llegaron a su tope, Cursor muestra «Submission blocked by hook» con el motivo, y el prompt no se
@@ -97,11 +122,15 @@ Lo que podés hacer, según el motivo:
 - **Chat caro:** abrí un chat nuevo; el contexto largo es lo que más encarece cada turno.
 - **Si de verdad hace falta seguir:** en otro chat, *«Levantá el bloqueo media hora»*.
 
-## 7. Actualizar
+## 8. Actualizar
+
+Cuando sale una versión nueva te llega una notificación: *«Hay una versión nueva de cursor-budget…»*. Se fija una vez
+por día y avisa una sola vez por versión. Para actualizar:
 
 > *«Actualizá cursor-budget»*
 
-Es la misma línea de instalación. Reemplaza el programa y respeta tus límites, tu registro y lo cargado del ciclo.
+Reemplaza el programa y respeta tus límites, tu registro y lo cargado del ciclo. Después recargá Cursor para que tome
+la extensión nueva. Si instalaste antes de que existiera el aviso, actualizá una vez a mano: desde ahí, te avisa solo.
 
 ## Si algo falla
 
@@ -115,6 +144,10 @@ Es la misma línea de instalación. Reemplaza el programa y respeta tus límites
 | El agente pide correr el comando fuera del sandbox | Es esperable: los límites viven en `~/.cursor/budget`. Aceptalo |
 | El total no coincide con Cursor | Volvé a cargar el monto de la página de uso (paso 3): el hook estima, Cursor cobra |
 | `cbudget: command not found` en la terminal | Abrí una terminal nueva: el alias se carga al abrirla |
+| No veo el gasto en la barra de estado de Cursor | Recargá la ventana: paleta de comandos (Cmd+Shift+P) → **Developer: Reload Window**. Cursor carga una extensión nueva recién al recargar |
+| La instalación dice que no pudo instalar la extensión | Tu organización puede permitir solo extensiones aprobadas. Pedí que la aprueben, o instalala vos: paleta de comandos → **Extensions: Install from VSIX…** y elegí el archivo que te nombra el instalador |
+| El pie de cursor-agent no muestra el gasto | Cerrá cursor-agent y abrilo de nuevo. Si sigue igual, *«Poné el gasto en el pie de cursor-agent»* |
+| La instalación dice «no lo toqué» | Tu `~/.cursor/hooks.json` no es JSON válido (te dice la línea): arreglalo o pedile al agente que lo revise, y volvé a instalar |
 
 ## De dónde sale cada captura
 
@@ -122,6 +155,8 @@ Es la misma línea de instalación. Reemplaza el programa y respeta tus límites
 |---|---|
 | `cursor-gasto.png`, `cursor-tope.png` | **Maqueta** reconstruida de chats reales de Cursor del 2026-10-24; en `cursor-gasto` se cambiaron los montos por los del ciclo de ejemplo y se acortaron los próximos pasos |
 | `cursor-bloqueo.png` | **Maqueta**: el título y el mensaje son los que mostró el IDE de Cursor el 2026-10-24; el resto de la pantalla es aproximado |
+| `cursor-barra.png` | **Maqueta**: la ventana es aproximada; el texto y los colores son los de la extensión (`vscode/format.js`) |
+| `agent-pie.png` | **Maqueta** del pie que mostró cursor-agent 2026.10.22 en un turno real del 2026-10-25, con otros montos |
 | `terminal-report.png` (en el README) | **Salida real** del `cbudget` actual, con un ciclo de datos inventados |
 
 Las fuentes están en [`img/src/`](img/src/): `gen_mocks.py` arma las maquetas y el reporte, y `capturas.sh` rehace todo.
