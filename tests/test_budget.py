@@ -256,6 +256,9 @@ class TestLimits(Home):
         self.assertIn("suman $120.00", messages)
         self.assertIn("tapado", messages)
 
+    def test_the_plan_cap_defaults_to_150(self):
+        self.assertEqual(budget.config(self.home)["cycle_limit"], 150.0)
+
     def test_defaults_pass_the_check(self):
         self.assertEqual(budget.check_limits(dict(budget.DEFAULTS), []), [])
 

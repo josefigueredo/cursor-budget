@@ -37,13 +37,13 @@ Los montos aceptan `$` y coma decimal (`12,5`); las partes, `%` (`80%`); los sí
 | `block_conversation` | $5 | bloquea los prompts siguientes de ese chat |
 | `warn_day` | $8 | avisa |
 | `block_day` | $15 | bloquea hasta mañana o hasta `allow` |
-| `cycle_day` / `cycle_limit` | 1 / $225 | día en que se reinicia el ciclo y tope del plan |
+| `cycle_day` / `cycle_limit` | 1 /  | día en que se reinicia el ciclo y tope del plan |
 | `cycle_warn` | 75%, 90%, 100% | avisa al cruzar esas partes del tope |
 | `notify_each_turn` | sí | después de cada turno: costo del turno, del chat y del ciclo |
 | `model_budgets` | ninguno | presupuesto del ciclo por patrón de modelo, p. ej. `{"claude-opus-*": 40}`: avisa al 80% (`model_warn`) y bloquea ese modelo al agotarlo |
 | `blocked_models` | `claude-opus-*-high`, `*-xhigh`, `*-max` | bloquea esos modelos |
 
-`cycle_limit` viene en $225; si tu plan tiene otro tope, cambialo primero (`cbudget limits set cycle_limit 200`).
+`cycle_limit` viene en ; si tu plan tiene otro tope, cambialo primero (`cbudget limits set cycle_limit 200`).
 Los cambios se guardan en `~/.cursor/budget/config.json`, solo las claves que cambiaste.
 
 `cbudget limits check` marca como **error** un aviso que no es menor que su bloqueo (el bloqueo llegaría sin aviso), y

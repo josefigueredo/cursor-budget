@@ -23,7 +23,7 @@ DEFAULTS = {
     "block_day": 15.0,
     "blocked_models": ["claude-opus-*-high", "*-xhigh", "*-max"],
     "cycle_day": 1,
-    "cycle_limit": 225.0,
+    "cycle_limit": 150.0,
     "cycle_warn": [0.75, 0.9, 1.0],
     "notify_each_turn": True,
     "model_budgets": {},
