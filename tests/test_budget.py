@@ -693,6 +693,62 @@ class TestUpdate(unittest.TestCase):
         self.assertEqual(popen.call_args.args[0][-1], "update-check")
 
 
+class TestVersionCommand(unittest.TestCase):
+    """`cbudget version` asks GitHub at that moment: a person runs it, so a second of waiting is fine."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.home = Path(self.tmp.name)
+        self.app = self.home / "app"
+        self.app.mkdir()
+        (self.app / "VERSION").write_text("abc1234def\n", encoding="utf-8")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_version(self, answer):
+        import contextlib, io
+        from unittest import mock
+        from cbudget import update
+        asked, out = [], io.StringIO()
+        def compare(sha):
+            asked.append(sha)
+            return answer
+        with mock.patch.object(budget, "HOME", self.home), mock.patch.object(cli, "APP", self.app), \
+                mock.patch.object(update, "compare_with_main", compare), mock.patch.object(cli, "notify", lambda m: None), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(["version"]), 0)
+        return asked, out.getvalue()
+
+    def test_it_checks_github_now_even_right_after_an_old_check_said_up_to_date(self):
+        from cbudget import update
+        budget.write_json_atomic(self.home / "update.json", {"checked": round(time.time()), "status": "identical"})
+        asked, out = self.run_version(("behind", "fff9999"))
+        self.assertEqual(asked, ["abc1234def"])
+        self.assertIn("instalado: abc1234", out)
+        self.assertIn("hay una versión nueva", out)
+        self.assertNotIn("al día", out)
+
+    def test_up_to_date_says_so(self):
+        _, out = self.run_version(("identical", None))
+        self.assertIn("al día con GitHub", out)
+
+    def test_without_github_it_says_it_could_not_check_and_when_it_last_did(self):
+        budget.write_json_atomic(self.home / "update.json", {"checked": 1792850000, "status": "identical"})
+        _, out = self.run_version(None)
+        self.assertIn("no pude consultar GitHub", out)
+        self.assertIn("24/10", out)
+
+
+class TestHelp(unittest.TestCase):
+    def test_help_points_to_the_workshop_episode(self):
+        import contextlib, io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            cli.main(["--help"])
+        self.assertIn("https://probable-dollop-lk5vvym.pages.github.io/serie-cursor.html#cursor-budget/", out.getvalue())
+
+
 class TestStatusline(Home):
     PAYLOAD = {"model": {"id": "claude-sonnet-5-5-high", "display_name": "Sonnet 5.5"},
                "context_window": {"used_percentage": 34.4}}
