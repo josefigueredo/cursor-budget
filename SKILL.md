@@ -53,7 +53,9 @@ the user's call, and they see every change in a notification and in `~/.cursor/b
 | They say the plan's extra was granted ("me otorgaron el extra") | `cb extra`: the first adds $75 to the cycle cap, the second the exceptional $75; a third is refused. Only when they say it was granted, never to get past the cycle warning |
 | Load what Cursor shows as spent this cycle | `cb seed --amount <usd>` (or `cb seed <csv>` with an exported usage CSV) |
 | A test notification, or they get no warnings | `cb notify-test`, then relay its hint about System Settings |
-| Update cursor-budget | `gh api repos/josefigueredo/cursor-budget/contents/bootstrap.sh -H "Accept: application/vnd.github.raw" \| bash` (keeps their limits, ledger and seed) |
+| Update cursor-budget, or they got the "versión nueva" notification | `cb update` (keeps their limits, ledger and seed). Without it (an older install): `gh api repos/josefigueredo/cursor-budget/contents/bootstrap.sh -H "Accept: application/vnd.github.raw" \| bash` |
+| Which version they have, or whether a newer one exists | `cb version` |
+| The spend in cursor-agent's footer, or remove it | `cb statusline install` / `cb statusline remove`. It never replaces a status line of their own: if it refuses, tell them, do not edit `cli-config.json` |
 
 Patterns use shell globs against Cursor's model ids (`claude-opus-5-5-high`, `auto-smart`, `composer-2.5`,
 `gpt-5.6-terra-medium`). For model budgets the first matching pattern wins, in the order of config.json.

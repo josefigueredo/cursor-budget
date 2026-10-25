@@ -526,5 +526,216 @@ class TestCli(unittest.TestCase):
             self.assertEqual([h["command"] for h in hooks["beforeSubmitPrompt"]], [cmd])
 
 
+class TestSafeInstall(unittest.TestCase):
+    """The installer edits files other tools own (hooks.json, cli-config.json): it must never lose their content."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_a_hooks_file_that_is_not_strict_json_is_left_alone(self):
+        path = self.dir / "hooks.json"
+        text = '{\n  "version": 1,\n  // formatter\n  "hooks": {"stop": [{"command": "other hook"}]},\n}\n'
+        path.write_text(text, encoding="utf-8")
+        with self.assertRaises(ValueError) as ctx:
+            cli.install_hook("/usr/bin/python3 /x/cbudget.py hook", path)
+        self.assertIn("línea 3", str(ctx.exception))
+        self.assertEqual(path.read_text(encoding="utf-8"), text)
+        self.assertEqual([p.name for p in self.dir.iterdir()], ["hooks.json"])
+
+    def test_a_hooks_file_with_an_unexpected_shape_is_left_alone(self):
+        path = self.dir / "hooks.json"
+        for data in ([], {"hooks": []}, {"hooks": {"stop": {}}}, {"hooks": {"stop": ["other hook"]}}):
+            path.write_text(json.dumps(data), encoding="utf-8")
+            with self.assertRaises(ValueError, msg=data):
+                cli.install_hook("/usr/bin/python3 /x/cbudget.py hook", path)
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8")), data)
+
+    def test_install_hook_command_says_why_it_left_the_file_alone(self):
+        import contextlib, io
+        from unittest import mock
+        path = self.dir / "hooks.json"
+        path.write_text("{,}", encoding="utf-8")
+        err = io.StringIO()
+        with mock.patch.object(cli, "HOOKS", path), contextlib.redirect_stderr(err), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.main(["install-hook"]), 1)
+        self.assertIn("no lo toqué", err.getvalue())
+
+    def test_the_rewrite_leaves_no_temporary_file_and_keeps_a_backup(self):
+        path = self.dir / "hooks.json"
+        path.write_text(json.dumps({"version": 1, "hooks": {}}), encoding="utf-8")
+        cli.install_hook("/usr/bin/python3 /x/cbudget.py hook", path)
+        names = sorted(p.name for p in self.dir.iterdir())
+        self.assertEqual(names[0], "hooks.json")
+        self.assertEqual(len(names), 2)
+        self.assertTrue(names[1].startswith("hooks.json.bak-"))
+
+    def test_hook_and_alias_use_the_system_python_not_the_one_that_ran_the_installer(self):
+        # a Homebrew python that ran install.sh disappears with `brew upgrade`; macOS keeps /usr/bin/python3
+        entry = Path("/Users/a b/.cursor/budget/app/cbudget.py")
+        self.assertEqual(cli.hook_command(entry), "/usr/bin/python3 '/Users/a b/.cursor/budget/app/cbudget.py' hook")
+        rc = self.dir / ".zshrc"
+        cli.install_alias(entry, rc)
+        [line] = rc.read_text(encoding="utf-8").splitlines()
+        self.assertIn("/usr/bin/python3", line)
+        import shlex
+        # the alias body is word-split when it expands: each part must survive a path with spaces
+        body = shlex.split(line.split("=", 1)[1].split("  #")[0])[0]
+        self.assertEqual(shlex.split(body), ["/usr/bin/python3", str(entry)])
+
+
+class TestUpdate(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.home = Path(self.tmp.name)
+        self.app = self.home / "app"
+        self.app.mkdir()
+        (self.app / "VERSION").write_text("abc1234def\n", encoding="utf-8")
+        self.notes = []
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def check(self, answer, t=NOON):
+        from cbudget import update
+        return update.check(self.home, self.app, now=lambda: t, compare=lambda sha: answer, notify=self.notes.append)
+
+    def test_reads_the_installed_commit(self):
+        from cbudget import update
+        self.assertEqual(update.installed(self.app), "abc1234def")
+        (self.app / "VERSION").unlink()
+        self.assertIsNone(update.installed(self.app))
+
+    def test_a_newer_main_is_notified_once_per_new_commit(self):
+        self.check(("behind", "fff9999"))
+        self.check(("behind", "fff9999"), t=NOON + 2 * 86400)
+        self.assertEqual(len(self.notes), 1)
+        self.assertIn("versión nueva de cursor-budget", self.notes[0])
+        self.assertIn("cbudget update", self.notes[0])
+        self.check(("behind", "eee8888"), t=NOON + 4 * 86400)
+        self.assertEqual(len(self.notes), 2)
+
+    def test_up_to_date_ahead_or_unknown_say_nothing(self):
+        for answer in (("identical", "abc1234def"), ("ahead", "abc1234def"), ("diverged", "x"), None):
+            self.check(answer)
+        self.assertEqual(self.notes, [])
+
+    def test_without_a_recorded_commit_it_does_not_check(self):
+        (self.app / "VERSION").unlink()
+        from cbudget import update
+        asked = []
+        update.check(self.home, self.app, now=lambda: NOON, compare=lambda sha: asked.append(sha),
+                     notify=self.notes.append)
+        self.assertEqual(asked, [])
+
+    def test_github_compare_reads_as_behind_when_main_has_newer_commits(self):
+        from cbudget import update
+        # compare/<installed>...main: "ahead" means main is ahead of the install
+        self.assertEqual(update.parse_compare({"status": "ahead", "commits": [{"sha": "a1"}, {"sha": "b2"}]}),
+                         ("behind", "b2"))
+        self.assertEqual(update.parse_compare({"status": "identical", "commits": []}), ("identical", None))
+        self.assertEqual(update.parse_compare({"status": "behind", "commits": []}), ("ahead", None))
+        self.assertIsNone(update.parse_compare({"message": "Not Found"}))
+
+    def test_the_check_runs_at_most_once_a_day_and_claims_the_slot_first(self):
+        from cbudget import update
+        self.assertTrue(update.claim(self.home, NOON))
+        self.assertFalse(update.claim(self.home, NOON + 3600))
+        self.assertTrue(update.claim(self.home, NOON + 86400 + 1))
+
+    def test_a_stop_hook_starts_the_check_in_the_background_without_waiting(self):
+        from unittest import mock
+        started = []
+        with mock.patch.object(budget, "HOME", self.home), mock.patch.object(cli, "APP", self.app), \
+                mock.patch.object(cli, "notify", self.notes.append), \
+                mock.patch.object(cli, "spawn_update_check", lambda: started.append(1)), \
+                mock.patch.object(budget.time, "time", lambda: NOON):
+            cli.hook(json.dumps(stop(input_tokens=10)))
+            cli.hook(json.dumps(stop(input_tokens=10)))
+        self.assertEqual(started, [1])
+
+    def test_the_background_check_detaches_from_the_hook_output(self):
+        import subprocess
+        from unittest import mock
+        with mock.patch.object(subprocess, "Popen") as popen:
+            cli.spawn_update_check()
+        kwargs = popen.call_args.kwargs
+        for stream in ("stdin", "stdout", "stderr"):
+            self.assertIs(kwargs[stream], subprocess.DEVNULL)
+        self.assertTrue(kwargs["start_new_session"])
+        self.assertEqual(popen.call_args.args[0][-1], "update-check")
+
+
+class TestStatusline(Home):
+    PAYLOAD = {"model": {"id": "claude-sonnet-5-5-high", "display_name": "Sonnet 5.5"},
+               "context_window": {"used_percentage": 34.4}}
+
+    def line(self, payload=None, t=NOON):
+        from cbudget import statusline
+        return statusline.line(self.PAYLOAD if payload is None else payload, home=self.home, now=lambda: t)
+
+    def test_shows_model_context_day_and_cycle_against_their_limits(self):
+        self.run_stop(stop(input_tokens=1_000_000))  # $2.25 at the mid tier
+        text = self.line()
+        for part in ("Sonnet 5.5", "contexto 34%", "hoy $", "de $15", "ciclo $", "de $150"):
+            self.assertIn(part, text)
+        self.assertNotIn("\n", text)
+
+    def test_a_broken_state_still_prints_the_model_never_an_empty_line(self):
+        (self.home / "config.json").write_text("[]", encoding="utf-8")
+        self.assertEqual(self.line(), "Sonnet 5.5")
+        self.assertEqual(self.line(payload={}), "cursor-budget")
+
+    def test_install_keeps_every_other_key_and_the_file_mode(self):
+        from cbudget import statusline
+        import os, stat
+        path = self.home / "cli-config.json"
+        cfg = {"version": 1, "authInfo": {"email": "x@y"}, "permissions": {"allow": ["Shell(ls)"]}}
+        path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+        os.chmod(path, 0o600)
+        self.assertTrue(statusline.install("/usr/bin/python3 /app/cbudget.py statusline", path))
+        data = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual({k: data[k] for k in cfg}, cfg)
+        self.assertEqual(data["statusLine"]["type"], "command")
+        self.assertEqual(data["statusLine"]["command"], "/usr/bin/python3 /app/cbudget.py statusline")
+        self.assertGreaterEqual(data["statusLine"]["updateIntervalMs"], 1000)
+        self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+        self.assertEqual([p.name for p in self.home.iterdir() if p.name.startswith("cli-config")], ["cli-config.json"])
+        self.assertFalse(statusline.install("/usr/bin/python3 /app/cbudget.py statusline", path))
+
+    def test_install_never_replaces_someone_elses_status_line(self):
+        from cbudget import statusline
+        path = self.home / "cli-config.json"
+        cfg = {"version": 1, "statusLine": {"type": "command", "command": "~/bin/my-line.sh"}}
+        path.write_text(json.dumps(cfg), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            statusline.install("/usr/bin/python3 /app/cbudget.py statusline", path)
+        self.assertEqual(json.loads(path.read_text(encoding="utf-8")), cfg)
+
+    def test_install_refuses_a_config_it_cannot_read_or_that_does_not_exist(self):
+        from cbudget import statusline
+        path = self.home / "cli-config.json"
+        with self.assertRaises(ValueError):
+            statusline.install("/usr/bin/python3 /app/cbudget.py statusline", path)
+        path.write_text('{"version": 1,', encoding="utf-8")
+        with self.assertRaises(ValueError):
+            statusline.install("/usr/bin/python3 /app/cbudget.py statusline", path)
+        self.assertEqual(path.read_text(encoding="utf-8"), '{"version": 1,')
+
+    def test_remove_takes_out_only_its_own_status_line(self):
+        from cbudget import statusline
+        path = self.home / "cli-config.json"
+        path.write_text(json.dumps({"version": 1}), encoding="utf-8")
+        statusline.install("/usr/bin/python3 /app/cbudget.py statusline", path)
+        self.assertTrue(statusline.remove(path))
+        self.assertEqual(json.loads(path.read_text(encoding="utf-8")), {"version": 1})
+        path.write_text(json.dumps({"statusLine": {"type": "command", "command": "mine"}}), encoding="utf-8")
+        self.assertFalse(statusline.remove(path))
+
+
 if __name__ == "__main__":
     unittest.main()

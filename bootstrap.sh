@@ -20,6 +20,5 @@ else
   git clone --quiet --depth 1 "git@github.com:$SLUG.git" "$TMP/repo"
 fi
 
-command -v python3 >/dev/null || { echo "Falta python3: instalá las Command Line Tools con xcode-select --install" >&2; exit 1; }
 bash "$TMP/repo/install.sh"
 echo "Listo. Abrí una terminal nueva y probá: cbudget report"
