@@ -22,20 +22,20 @@
 <span class="o">~/.cursor/budget/app</span>
 <span class="o">../../.agents/skills/cursor-budget</span>
 <span class="p">$</span> <span class="k">tail -n 1 ~/.zshrc</span>
-<span class="o">alias cbudget=&#x27;~/.homebrew/opt/python@3.15/bin/python3.15 ~/.cursor/budget/app/cbudget.py&#x27;  # cursor-budget</span>
+<span class="o">alias cbudget=&#x27;/usr/bin/python3 ~/.cursor/budget/app/cbudget.py&#x27;  # cursor-budget</span>
 <span class="p">$</span> <span class="k">python3 -m json.tool ~/.cursor/hooks.json</span>
 <span class="o">{</span>
 <span class="o">    &quot;version&quot;: 1,</span>
 <span class="o">    &quot;hooks&quot;: {</span>
 <span class="o">        &quot;stop&quot;: [</span>
 <span class="o">            {</span>
-<span class="o">                &quot;command&quot;: &quot;~/.homebrew/opt/python@3.15/bin/python3.15 ~/.cursor/budget/app/cbudget.py hook&quot;,</span>
+<span class="o">                &quot;command&quot;: &quot;/usr/bin/python3 ~/.cursor/budget/app/cbudget.py hook&quot;,</span>
 <span class="o">                &quot;timeout&quot;: 10</span>
 <span class="o">            }</span>
 <span class="o">        ],</span>
 <span class="o">        &quot;beforeSubmitPrompt&quot;: [</span>
 <span class="o">            {</span>
-<span class="o">                &quot;command&quot;: &quot;~/.homebrew/opt/python@3.15/bin/python3.15 ~/.cursor/budget/app/cbudget.py hook&quot;,</span>
+<span class="o">                &quot;command&quot;: &quot;/usr/bin/python3 ~/.cursor/budget/app/cbudget.py hook&quot;,</span>
 <span class="o">                &quot;timeout&quot;: 10</span>
 <span class="o">            }</span>
 <span class="o">        ]</span>
