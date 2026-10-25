@@ -31,6 +31,7 @@ cbudget install-hook         # suma el hook a ~/.cursor/hooks.json sin tocar los
 cbudget alias                # agrega o actualiza el alias en ~/.zshrc (o ~/.bashrc)
 cbudget hook                 # lo que corre Cursor: lee el evento por stdin y contesta JSON
 cbudget statusline           # lo que corre cursor-agent: lee su JSON por stdin e imprime la línea del pie
+cbudget panel                # lo que lee el panel de la extensión: el detalle y los límites, en JSON
 cbudget update-check         # lo que arranca el hook una vez por día, en segundo plano
 ```
 
@@ -124,7 +125,11 @@ abierta, cerrala y volvé a abrirla; si al cerrarse pisó el archivo, `cbudget s
 La app de Cursor no deja que un hook escriba en el chat, así que el gasto va en la barra de estado del editor, abajo a
 la derecha. La ventana de Agentes de Cursor 3 no tiene barra de estado, y una extensión no puede agregarle nada: ahí el
 gasto llega por las notificaciones; el botón **IDE ↗** abre el editor con la barra. La línea: `hoy $3.20 de $15 · ciclo $84 de $150`. Se pone amarilla al pasar `warn_day` o el primer aviso del ciclo
-(75%), y roja al llegar a `block_day` o al tope del ciclo. Un clic abre el reporte. Se actualiza cada 10 segundos y
+(75%), y roja al llegar a `block_day` o al tope del ciclo. Un clic abre un panel con dos pestañas: **Detalle** (el
+ciclo, hoy, por modelo, por día, los chats más caros y los presupuestos) y **Límites** (cada límite editable, los
+modelos bloqueados, los presupuestos por modelo, los extras y el chequeo). Un cambio desde el panel corre
+`cbudget limits … --by "extensión de Cursor"`: se valida, queda en `changes.jsonl` y llega la notificación. Los datos
+los da `cbudget panel`, en JSON. Se actualiza cada 10 segundos y
 apenas se registra un turno.
 
 Es una extensión chica que vive en `vscode/` del repo. `install.sh` la arma (un `.vsix`, sin node) y la instala con

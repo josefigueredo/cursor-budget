@@ -81,7 +81,9 @@ de Agentes el gasto te llega igual en la notificación de cada turno, y se lo po
 - **ciclo** es lo que llevás del mes de facturación, al lado del tope del plan más los extras que te otorgaron.
 - Se pone **amarilla** cuando pasás un aviso (el del día, o el 75% del ciclo) y **roja** cuando llegás a un bloqueo o
   al tope del ciclo.
-- Un clic abre el reporte completo.
+- Un clic abre un panel con dos pestañas: **Detalle** (el ciclo, hoy, el gasto por modelo, por día y los chats más
+  caros) y **Límites**, donde cambiás cada límite, bloqueás o desbloqueás modelos y ponés presupuestos por modelo.
+  Cada cambio queda registrado y te llega la notificación, igual que si se lo pedís al agente.
 
 **En cursor-agent** (Cursor en la terminal), el pie muestra el modelo, cuánto del contexto usaste y el mismo gasto:
 

@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 from typing import Optional, Sequence
 
-from . import budget, limits, render, statusline, update
+from . import budget, limits, panel, render, statusline, update
 
 HOOKS = Path.home() / ".cursor" / "hooks.json"
 EVENTS = ("stop", "beforeSubmitPrompt")
@@ -232,6 +232,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     stl = sub.add_parser("statusline", help="cursor-agent's footer: print the line (stdin: its JSON), or install it")
     stl.add_argument("action", nargs="?", choices=("install", "remove"))
     stl.add_argument("--json", action="store_true", help="the numbers as JSON (Cursor's status bar extension)")
+    sub.add_parser("panel", help="everything Cursor's extension panel shows, as JSON")
     sub.add_parser("version", help="the installed commit and whether a newer one exists")
     sub.add_parser("update", help="install the latest version from GitHub (keeps limits, ledger and seed)")
     sub.add_parser("update-check", help="compare the install with GitHub once and notify a newer version")
@@ -292,6 +293,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             print(json.dumps(statusline.summary()))
             return 0
         return statusline_command(args.action)
+    if args.cmd == "panel":
+        print(json.dumps(panel.data(), ensure_ascii=False))
+        return 0
     if args.cmd == "version":
         sha, known = update.installed(APP), update.state(budget.HOME)
         print(f"instalado: {sha[:7] if sha else 'sin registrar (instalado antes de que se registrara la versión)'}")
