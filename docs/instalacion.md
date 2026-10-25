@@ -32,13 +32,23 @@ Notificaciones → Script Editor y activá «Permitir notificaciones». Para pro
 
 ## 3. Cargar lo que ya gastaste
 
-El hook cuenta desde que lo instalaste: no sabe lo que gastaste antes en el ciclo. Abrí cursor.com/dashboard → Usage,
-mirá «Your monthly usage» (por ejemplo «$84.30 / $200») y decile:
+**Una sola vez, el día que lo instalás.** El hook cuenta desde que lo instalaste y no sabe lo que gastaste antes este
+mes, así que se lo pasás desde la página de uso de Cursor:
 
-> *«Cursor dice que llevo 84,30 de 200 este mes»*
+1. Abrí [cursor.com/dashboard/usage](https://cursor.com/dashboard/usage) en el navegador, con tu cuenta de Cursor.
+2. Arriba del gráfico, tocá **MTD** (el mes en curso, del día 1 a hoy) y después **Apply**.
+3. Tocá **Export CSV**. Se baja un archivo a **Descargas** con un nombre que empieza con `team-usage-events`.
 
-El agente carga lo gastado (`seed --amount`) y ajusta el tope del plan si no es el que trae por defecto ($150). Si
-exportaste el CSV de uso (Usage → Export), pasáselo en lugar del monto: trae además el detalle por modelo y por día.
+Después, en el chat de Cursor, pasale ese archivo en el primer prompt:
+
+> *«Es la primera vez que uso cursor-budget. Cargá el CSV de uso que bajé de Cursor: ~/Downloads/team-usage-events….csv»*
+
+Si no sabés la ruta, arrastrá el archivo desde Descargas al chat. El agente corre `seed` con el CSV y te dice cuánto
+llevás, con el detalle por modelo y por día. **No hay que repetirlo:** desde ahí los hooks cuentan cada turno, también
+en los meses que vienen. Si elegiste más días de los del mes, no pasa nada: lo de antes del día 1 se ignora.
+
+Sin CSV también se puede: decile el monto de «Your monthly usage» (*«Cursor dice que llevo 84,30 este mes»*) y lo carga
+con `seed --amount`, sin el detalle por modelo.
 
 Si pasás el tope y te otorgan el extra del plan, decile *«me otorgaron el extra»*: el tope del ciclo sube $75. Si
 después te dan el extra excepcional, otros $75. El aviso del 100% te recuerda cuál podés pedir.
