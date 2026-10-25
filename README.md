@@ -23,8 +23,9 @@ cambio queda anotado con quién lo hizo y sale una notificación. Lo que no pued
 | Componente | Qué resuelve | Escribe | Se instala con | Showcase | Instalación |
 |---|---|---|---|---|---|
 | **Hook `stop`** | Saber cuánto costó cada turno y enterarte cuando un chat, el día o el ciclo pasan su límite | `~/.cursor/budget/ledger.jsonl` | `install.sh` | [Ver el caso](docs/showcase.md#1-ver-cuánto-llevás) | [Instalar](docs/instalacion.md#1-instalar) |
-| **Hook `beforeSubmitPrompt`** | Frenar un prompt antes de que cueste: modelo bloqueado, presupuesto agotado, chat o día en su tope | `~/.cursor/budget/blocks.jsonl` | `install.sh` | [Ver el caso](docs/showcase.md#4-cuando-te-frena) | [Instalar](docs/instalacion.md#6-cuando-te-frena) |
-| **Skill `cursor-budget`** | Ver el gasto y cambiar los límites conversando, desde Cursor, Claude Code o Codex | `~/.cursor/budget/config.json` y `changes.jsonl` | `install.sh` | [Ver el caso](docs/showcase.md#2-cambiar-un-límite-desde-el-chat) | [Instalar](docs/instalacion.md#5-cambiar-un-límite) |
+| **Hook `beforeSubmitPrompt`** | Frenar un prompt antes de que cueste: modelo bloqueado, presupuesto agotado, chat o día en su tope | `~/.cursor/budget/blocks.jsonl` | `install.sh` | [Ver el caso](docs/showcase.md#4-cuando-te-frena) | [Instalar](docs/instalacion.md#7-cuando-te-frena) |
+| **Skill `cursor-budget`** | Ver el gasto y cambiar los límites conversando, desde Cursor, Claude Code o Codex | `~/.cursor/budget/config.json` y `changes.jsonl` | `install.sh` | [Ver el caso](docs/showcase.md#2-cambiar-un-límite-desde-el-chat) | [Instalar](docs/instalacion.md#6-cambiar-un-límite) |
+| **Barra de estado y pie de cursor-agent** | Ver el gasto de hoy y del ciclo sin preguntar, en amarillo o rojo cerca de un límite | nada (leen el registro) | `install.sh` | [Ver el caso](docs/showcase.md#6-el-gasto-siempre-a-la-vista) | [Instalar](docs/instalacion.md#5-ver-el-gasto-mientras-trabajás) |
 | **`cbudget` en la terminal** | El reporte con colores y el editor interactivo de límites | `~/.cursor/budget/config.json` y `changes.jsonl` | `install.sh` (alias) | [Ver el caso](docs/showcase.md#3-el-reporte-y-el-editor-en-la-terminal) | [Instalar](docs/instalacion.md#4-preguntar-cuánto-llevás) |
 
 ## Un ejemplo: el reporte

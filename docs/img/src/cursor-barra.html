@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:0;background:#cfd3e6;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Helvetica,Arial,sans-serif}
+.win{margin:22px;width:1196px;border-radius:12px;overflow:hidden;box-shadow:0 18px 50px rgba(20,20,40,.35),0 0 0 1px rgba(0,0,0,.18)}
+.bar{height:38px;background:#e4e4e6;display:flex;align-items:center;padding:0 14px;position:relative;border-bottom:1px solid #d6d6d9}
+.dots span{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px}
+.dots .r{background:#ff5f57}.dots .y{background:#febc2e}.dots .g{background:#28c840}
+.ttl{position:absolute;left:0;right:0;text-align:center;color:#6b6b72;font-size:13px}
+.body{background:#fbfbfc;height:150px;padding:22px 28px;color:#8a8a8f;font:13px Menlo,monospace;line-height:1.7}
+.status{height:26px;background:#f3f3f5;border-top:1px solid #dcdce0;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:12px;color:#4b4b52}
+.status span{padding:2px 8px;border-radius:4px;margin-left:4px}
+.item{background:#e8e8ec;color:#1d1d1f}.warn{background:#f5c542;color:#2b2200}.err{background:#d64545;color:#fff}
+.lbl{margin:14px 22px 0;font-size:13px;color:#4b4b52}.rows{margin:0 22px 22px}
+.row{display:flex;align-items:center;gap:14px;margin:8px 0}.row .status{flex:1;border:1px solid #dcdce0;border-radius:6px}
+.tag{width:120px;font-size:13px;color:#4b4b52}</style>
+<div class="win"><div class="bar"><div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div><div class="ttl">pagos — Cursor</div></div>
+<div class="body">src/pagos/service.ts<br>…</div>
+<div class="status"><div>⑂ main &nbsp; ⊗ 0 ⚠ 0</div><div><span>Ln 12, Col 4</span><span>TypeScript</span><span class="item">∿ hoy $3.20 de $15 · ciclo $84 de $150</span></div></div></div>
+<div class="lbl">El mismo ítem cuando se acerca o llega a un límite:</div>
+<div class="rows">
+<div class="row"><div class="tag">pasó un aviso</div><div class="status"><div></div><div><span class="warn">∿ hoy $9.10 de $15 · ciclo $84 de $150</span></div></div></div>
+<div class="row"><div class="tag">llegó a un bloqueo</div><div class="status"><div></div><div><span class="err">∿ hoy $15.20 de $15 · ciclo $84 de $150</span></div></div></div>
+</div>

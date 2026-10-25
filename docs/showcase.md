@@ -134,7 +134,34 @@ Después de cada turno, una notificación con el costo del turno, del chat y del
 - cuando el chat pasa `warn_conversation` ($2): *«abrí un chat nuevo»*;
 - cuando el día pasa `warn_day` ($8);
 - cuando el ciclo cruza 75%, 90% y 100% de `cycle_limit`;
-- cuando un modelo usa el 80% (`model_warn`) y el 100% de su presupuesto.
+- cuando un modelo usa el 80% (`model_warn`) y el 100% de su presupuesto;
+- cuando sale una versión nueva de cursor-budget (se fija una vez por día; avisa una vez por versión).
+
+## 6. El gasto siempre a la vista
+
+**Componentes:** la extensión de Cursor (`vscode/`) y la `statusLine` de cursor-agent · **Escribe:** nada; leen el
+registro.
+
+![Barra de estado de Cursor con el gasto de hoy y del ciclo, y cómo se pinta en amarillo y en rojo](img/cursor-barra.png)
+
+*Maqueta: la ventana es aproximada; el texto y los colores son los de la extensión.*
+
+La app de Cursor no deja que un hook escriba en el chat, así que el gasto va en la barra de estado: lo de hoy contra
+`block_day` y lo del ciclo contra el tope con sus extras. Amarillo al pasar un aviso, rojo al llegar a un bloqueo. Un
+clic abre el reporte. En cursor-agent, el mismo gasto ocupa el pie, junto al modelo y al contexto:
+
+![Pie de cursor-agent con el modelo, el contexto y el gasto de hoy y del ciclo](img/agent-pie.png)
+
+*Maqueta del pie que mostró cursor-agent en un turno real del 2026-10-25, con otros montos.*
+
+**Qué pasa si algo sale mal**
+
+| Situación | Resultado |
+|---|---|
+| La extensión recién instalada no aparece | Cursor la carga al recargar la ventana (**Developer: Reload Window**) |
+| La organización solo permite extensiones aprobadas | La instalación sigue; la extensión se instala a mano desde el `.vsix` o cuando la aprueben |
+| Faltan las Command Line Tools | La barra dice «cursor-budget sin instalar» y no abre el diálogo de macOS en cada consulta |
+| cursor-agent ya tenía su propio pie | El instalador no lo reemplaza |
 
 ---
 
