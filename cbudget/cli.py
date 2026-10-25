@@ -178,7 +178,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     cal = sub.add_parser("calibrate", help="billed vs estimated per model, from Cursor's usage CSV")
     cal.add_argument("csv", type=Path)
     sed = sub.add_parser("seed", help="this cycle's spend so far: from Cursor's usage CSV, or the amount its page shows")
-    sed.add_argument("csv", type=Path, nargs="?")
+    sed.add_argument("csv", type=Path, nargs="*", help="the usage CSV; given several (a glob), the newest one")
     sed.add_argument("--amount", help="what Cursor's Usage page shows, e.g. 84.30")
     lim = sub.add_parser("limits", help="show, check and change the limits")
     lim.add_argument("--color", choices=("auto", "always", "never"), default="auto")
@@ -213,7 +213,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(calibrate_report(args.csv))
         return 0
     if args.cmd == "seed":
-        if (args.csv is None) == (args.amount is None):
+        if bool(args.csv) == (args.amount is not None):
             print("indicá el CSV o --amount con lo que muestra la página de uso de Cursor", file=sys.stderr)
             return 2
         if args.amount is not None:
@@ -226,9 +226,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                   f"Desde ahora suma lo que vean los hooks.")
             return 0
         import csv
-        with args.csv.open(newline="", encoding="utf-8") as fh:
-            base = budget.seed(csv.DictReader(fh))
-        print(f"Ciclo desde {base['cycle_start']}: ${base['billed']:.2f} cobrado según el CSV")
+        path = max(args.csv, key=lambda p: p.stat().st_mtime)  # a re-download "(1)" is the newest
+        with path.open(newline="", encoding="utf-8") as fh:
+            base = budget.seed(csv.DictReader(fh), home=budget.HOME, now=time.time)
+        used = f" ({path.name}, el más nuevo de {len(args.csv)})" if len(args.csv) > 1 else ""
+        print(f"Ciclo desde {base['cycle_start']}: ${base['billed']:.2f} cobrado según el CSV{used}")
         return 0
     if args.cmd == "allow":
         until = budget.allow(args.minutes)

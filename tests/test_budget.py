@@ -211,6 +211,22 @@ class TestExtras(Home):
         self.assertIn("los 2 extras", out)
         self.assertEqual(json.loads((self.home / "changes.jsonl").read_text().splitlines()[0])["actor"], "agente")
 
+    def test_seed_with_several_csvs_takes_the_newest_and_says_which(self):
+        # a glob like team-usage-events*.csv matches a re-download "(1)" too
+        import contextlib, io, os
+        from unittest import mock
+        head = "Date,Model,Cost\n"
+        old, new = self.home / "team-usage-events.csv", self.home / "team-usage-events (1).csv"
+        old.write_text(head + "2026-10-20T12:00:00.000Z,claude-sonnet-5-5-high,10.00\n", encoding="utf-8")
+        new.write_text(head + "2026-10-20T12:00:00.000Z,claude-sonnet-5-5-high,30.00\n", encoding="utf-8")
+        os.utime(old, (NOON - 600, NOON - 600))
+        out = io.StringIO()
+        with mock.patch.object(budget, "HOME", self.home), mock.patch.object(budget.time, "time", lambda: NOON), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(["seed", str(old), str(new)]), 0)
+        self.assertIn("team-usage-events (1).csv", out.getvalue())
+        self.assertIn("$30.00", out.getvalue())
+
     def test_the_check_compares_model_budgets_with_the_cap_including_extras(self):
         (self.home / "config.json").write_text(json.dumps({"model_budgets": {"claude-*": 195}}), encoding="utf-8")
         self.assertIn("suman $195.00", limits.show(home=self.home, color=False, now=NOON))
