@@ -112,7 +112,8 @@ def report(days: int, home: Path = budget.HOME, color: bool = False, now: Option
     reset = next_cycle(start, cfg["cycle_day"])
     today = datetime.date.fromtimestamp(now)
     cycle, seeded = budget.cycle_total(ledger, home, now, cfg["cycle_day"])
-    limit = float(cfg["cycle_limit"])
+    limit = budget.cycle_cap(cfg, home, now)
+    extras = budget.extras_granted(home, now, cfg["cycle_day"])
     share = cycle / limit if limit else 0.0
     out = ["", " " + paint("Uso de Cursor", TEXT, bold=True)]
 
@@ -125,7 +126,9 @@ def report(days: int, home: Path = budget.HOME, color: bool = False, now: Option
         paint(money(cycle), TEXT, bold=True) + paint(f" / {money(limit)}", MUTED),
         line_bar(share, size - 4, paint, ACCENT if share < 0.9 else RED),
         paint(f"Se reinicia el {long_date(reset)}  ·  Quedan {(reset - today).days} días", MUTED),
-        paint(source, MUTED)], size, paint)
+        paint(source, MUTED)]
+        + ([paint("Tope del plan " + money(float(cfg["cycle_limit"]))
+                  + "".join(" + extra " + money(usd) for usd in extras), MUTED)] if extras else []), size, paint)
 
     # Stat cards
     today_usd = sum(budget.daily_by_model(ledger, home, now, cfg["cycle_day"]).get(today.isoformat(), {}).values())

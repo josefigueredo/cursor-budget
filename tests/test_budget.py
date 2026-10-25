@@ -113,6 +113,92 @@ class TestCycle(Home):
         self.assertEqual(self.notes, [])
 
 
+class TestExtras(Home):
+    TURN = stop(input_tokens=1_000_000, cache_read_tokens=1_000_000)  # ~$0.35
+
+    def grant(self, t=NOON):
+        return budget.grant_extra(home=self.home, now=lambda: t, actor="terminal", notify=self.notes.append)
+
+    def test_the_plan_takes_an_extra_and_then_an_exceptional_one_of_75_each(self):
+        self.assertEqual(budget.cycle_cap(budget.config(self.home), self.home, NOON), 150.0)
+        self.assertEqual(self.grant()["after"], 225.0)
+        self.assertEqual(self.grant()["after"], 300.0)
+        self.assertEqual(budget.cycle_cap(budget.config(self.home), self.home, NOON), 300.0)
+
+    def test_a_third_extra_is_refused_and_changes_nothing(self):
+        self.grant()
+        self.grant()
+        with self.assertRaises(ValueError) as cm:
+            self.grant()
+        self.assertIn("los 2 extras", str(cm.exception))
+        self.assertEqual(budget.cycle_cap(budget.config(self.home), self.home, NOON), 300.0)
+
+    def test_extras_end_with_their_cycle(self):
+        self.grant()
+        next_cycle = NOON + 10 * 86400  # 2026-11-03
+        self.assertEqual(budget.cycle_cap(budget.config(self.home), self.home, next_cycle), 150.0)
+
+    def test_each_extra_is_logged_and_notified(self):
+        self.grant()
+        [change] = [json.loads(line) for line in (self.home / "changes.jsonl").read_text().splitlines()]
+        self.assertEqual((change["key"], change["before"], change["after"], change["actor"]),
+                         ("cycle_extra", 150.0, 225.0, "terminal"))
+        self.assertTrue(any("extra" in n and "$225" in n for n in self.notes))
+
+    def test_reaching_the_plan_cap_suggests_asking_for_the_extra(self):
+        budget.seed_amount(149.80, home=self.home, now=lambda: NOON - 60, cycle_day=1)
+        self.run_stop(self.TURN)
+        [warning] = [n for n in self.notes if "el ciclo ya va" in n]
+        self.assertIn("100%", warning)
+        self.assertIn("pedir el extra de $75", warning)
+        self.assertIn("cbudget extra", warning)
+
+    def test_with_the_extra_the_warnings_follow_the_new_cap(self):
+        self.grant()
+        budget.seed_amount(149.80, home=self.home, now=lambda: NOON - 60, cycle_day=1)
+        self.run_stop(self.TURN)
+        self.assertFalse(any("100%" in n for n in self.notes))
+        budget.seed_amount(224.80, home=self.home, now=lambda: NOON + 60, cycle_day=1)
+        self.run_stop(self.TURN, t=NOON + 120)
+        [warning] = [n for n in self.notes if "el ciclo ya va" in n and "100%" in n]
+        self.assertIn("de $225", warning)
+        self.assertIn("extra excepcional de $75", warning)
+
+    def test_with_both_extras_used_the_warning_says_there_is_no_more(self):
+        self.grant()
+        self.grant()
+        budget.seed_amount(299.80, home=self.home, now=lambda: NOON - 60, cycle_day=1)
+        self.run_stop(self.TURN)
+        [warning] = [n for n in self.notes if "el ciclo ya va" in n and "100%" in n]
+        self.assertIn("ya usaste los 2 extras", warning)
+
+    def extra_cli(self):
+        import contextlib, io
+        from unittest import mock
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(budget, "HOME", self.home), mock.patch.object(cli, "notify", self.notes.append), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = cli.main(["extra", "--by", "agente"])
+        return code, out.getvalue() + err.getvalue()
+
+    def test_cli_registers_the_extras_in_order_and_refuses_a_third(self):
+        self.assertEqual(self.extra_cli(), (0, "El extra de $75 quedó registrado: el tope del ciclo pasa de "
+                                               "$150.00 a $225.00.\n"))
+        code, out = self.extra_cli()
+        self.assertEqual(code, 0)
+        self.assertIn("El extra excepcional de $75", out)
+        code, out = self.extra_cli()
+        self.assertEqual(code, 1)
+        self.assertIn("los 2 extras", out)
+        self.assertEqual(json.loads((self.home / "changes.jsonl").read_text().splitlines()[0])["actor"], "agente")
+
+    def test_the_report_counts_the_extra_in_the_cap(self):
+        self.grant()
+        out = render.report(7, home=self.home, now=NOON)
+        self.assertIn("/ $225.00", out)
+        self.assertIn("$150.00 + extra $75.00", out)
+
+
 class TestModelBudget(Home):
     def setUp(self):
         super().setUp()
@@ -255,6 +341,9 @@ class TestLimits(Home):
         messages = " ".join(m for _, m in budget.check_limits(cfg, ["claude-opus-5-5-high"]))
         self.assertIn("suman $120.00", messages)
         self.assertIn("tapado", messages)
+
+    def test_the_plan_cap_defaults_to_150(self):
+        self.assertEqual(budget.config(self.home)["cycle_limit"], 150.0)
 
     def test_defaults_pass_the_check(self):
         self.assertEqual(budget.check_limits(dict(budget.DEFAULTS), []), [])

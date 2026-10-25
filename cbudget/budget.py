@@ -23,7 +23,8 @@ DEFAULTS = {
     "block_day": 15.0,
     "blocked_models": ["claude-opus-*-high", "*-xhigh", "*-max"],
     "cycle_day": 1,
-    "cycle_limit": 225.0,
+    "cycle_limit": 150.0,
+    "cycle_extras": [75.0, 75.0],
     "cycle_warn": [0.75, 0.9, 1.0],
     "notify_each_turn": True,
     "model_budgets": {},
@@ -112,6 +113,52 @@ def cycle_total(entries: list, home: Path, t: float, cycle_day: int) -> tuple:
     return round(billed + estimated, 4), seeded
 
 
+EXTRA_NAMES = ("el extra", "el extra excepcional")
+
+
+def extras_granted(home: Path, t: float, cycle_day: int) -> list:
+    """The extras registered for the cycle containing t, in order. They end with their cycle."""
+    state = load_json(home / "extras.json", {})
+    return list(state.get("granted") or []) if state.get("cycle_start") == cycle_start(t, cycle_day) else []
+
+
+def cycle_cap(cfg: dict, home: Path, t: float) -> float:
+    """The plan cap plus the extras granted this cycle."""
+    return round(float(cfg["cycle_limit"]) + sum(extras_granted(home, t, cfg["cycle_day"])), 2)
+
+
+def extra_name(i: int) -> str:
+    return EXTRA_NAMES[i] if i < len(EXTRA_NAMES) else "otro extra"
+
+
+def extra_hint(cfg: dict, home: Path, t: float) -> str:
+    """What to do when the cycle reaches its cap: ask for the next extra, or say none is left."""
+    i, extras = len(extras_granted(home, t, cfg["cycle_day"])), cfg["cycle_extras"]
+    if i < len(extras):
+        return f" Podés pedir {extra_name(i)} de ${float(extras[i]):.0f} y registrarlo con `cbudget extra`."
+    return f" No quedan extras: ya usaste los {len(extras)} extras del ciclo."
+
+
+def grant_extra(home: Path = HOME, now: Callable[[], float] = time.time, actor: str = "cli",
+                notify: Callable[[str], None] = lambda msg: None) -> dict:
+    """Register the next extra of the plan for this cycle, once it was granted. Logged and notified like a limit."""
+    t, cfg = now(), config(home)
+    granted, extras = extras_granted(home, t, cfg["cycle_day"]), cfg["cycle_extras"]
+    if len(granted) >= len(extras):
+        raise ValueError(f"ya se registraron los {len(extras)} extras de este ciclo: el tope es "
+                         f"${cycle_cap(cfg, home, t):.2f} hasta que se reinicie")
+    name, usd, before = extra_name(len(granted)), float(extras[len(granted)]), cycle_cap(cfg, home, t)
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "extras.json").write_text(json.dumps({"cycle_start": cycle_start(t, cfg["cycle_day"]),
+                                                  "granted": granted + [usd]}), encoding="utf-8")
+    after = cycle_cap(cfg, home, t)
+    with (home / "changes.jsonl").open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"t": round(t), "actor": actor, "key": "cycle_extra", "before": before,
+                             "after": after}, ensure_ascii=False) + "\n")
+    notify(f"Cursor: {name} de ${usd:.0f} registrado ({actor}): el tope del ciclo pasa a ${after:.0f}.")
+    return {"name": name, "usd": usd, "before": before, "after": after}
+
+
 def budget_for(model: str, budgets: dict) -> Optional[str]:
     """The first pattern in model_budgets that matches the model, in the order written in config.json."""
     return next((pattern for pattern in budgets if fnmatch.fnmatch(model, pattern)), None)
@@ -149,11 +196,12 @@ def on_stop(payload: dict, home: Path = HOME, now: Callable[[], float] = time.ti
         fh.write(json.dumps(entry) + "\n")
     conv_after, day_after = round(conv_before + usd, 4), round(day_before + usd, 4)
     cycle_after, seeded = cycle_total(entries + [entry], home, t, cfg["cycle_day"])
-    cycle_before, limit = round(cycle_after - usd, 4), cfg["cycle_limit"]
+    cycle_before, limit = round(cycle_after - usd, 4), cycle_cap(cfg, home, t)
     since = "" if seeded else " desde que se instaló; cargá lo gastado con `cbudget seed --amount <usd>`"
     for share in sorted(cfg["cycle_warn"], reverse=True):
         if crossed(cycle_before, cycle_after, limit * share):
-            notify(f"Cursor: el ciclo ya va ~${cycle_after:.2f} de ${limit:.0f} ({cycle_after / limit:.0%}){since}.")
+            hint = extra_hint(cfg, home, t) if share >= 1 else ""
+            notify(f"Cursor: el ciclo ya va ~${cycle_after:.2f} de ${limit:.0f} ({cycle_after / limit:.0%}){since}.{hint}")
             break
     else:
         if cfg["notify_each_turn"]:

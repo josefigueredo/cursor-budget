@@ -37,8 +37,11 @@ mirá «Your monthly usage» (por ejemplo «$84.30 / $200») y decile:
 
 > *«Cursor dice que llevo 84,30 de 200 este mes»*
 
-El agente carga lo gastado (`seed --amount`) y ajusta el tope del plan si no es el que trae por defecto ($225). Si
+El agente carga lo gastado (`seed --amount`) y ajusta el tope del plan si no es el que trae por defecto ($150). Si
 exportaste el CSV de uso (Usage → Export), pasáselo en lugar del monto: trae además el detalle por modelo y por día.
+
+Si pasás el tope y te otorgan el extra del plan, decile *«me otorgaron el extra»*: el tope del ciclo sube $75. Si
+después te dan el extra excepcional, otros $75. El aviso del 100% te recuerda cuál podés pedir.
 
 ## 4. Preguntar cuánto llevás
 

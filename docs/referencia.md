@@ -20,6 +20,7 @@ cbudget limits block 'claude-opus-*'         # bloquea un patrón (unblock lo li
 cbudget allow --minutes 30   # levanta todos los bloqueos un rato
 cbudget seed --amount 84.30  # lo gastado este ciclo según la página de uso de Cursor
 cbudget seed usage.csv       # lo cobrado este ciclo según el CSV de Cursor, con el detalle por modelo y por día
+cbudget extra                # registra el extra del plan que te otorgaron (+$75; otra vez, el excepcional)
 cbudget calibrate usage.csv  # cobrado contra estimado por modelo
 cbudget notify-test          # manda una notificación de prueba y explica cómo habilitarlas
 cbudget install-hook         # suma el hook a ~/.cursor/hooks.json sin tocar los demás (deja un .bak)
@@ -37,14 +38,24 @@ Los montos aceptan `$` y coma decimal (`12,5`); las partes, `%` (`80%`); los sí
 | `block_conversation` | $5 | bloquea los prompts siguientes de ese chat |
 | `warn_day` | $8 | avisa |
 | `block_day` | $15 | bloquea hasta mañana o hasta `allow` |
-| `cycle_day` / `cycle_limit` | 1 / $225 | día en que se reinicia el ciclo y tope del plan |
+| `cycle_day` / `cycle_limit` | 1 / $150 | día en que se reinicia el ciclo y tope del plan |
+| `cycle_extras` | $75, $75 | el extra del plan y el excepcional: cada `cbudget extra` suma el siguiente al tope del ciclo |
 | `cycle_warn` | 75%, 90%, 100% | avisa al cruzar esas partes del tope |
 | `notify_each_turn` | sí | después de cada turno: costo del turno, del chat y del ciclo |
 | `model_budgets` | ninguno | presupuesto del ciclo por patrón de modelo, p. ej. `{"claude-opus-*": 40}`: avisa al 80% (`model_warn`) y bloquea ese modelo al agotarlo |
 | `blocked_models` | `claude-opus-*-high`, `*-xhigh`, `*-max` | bloquea esos modelos |
 
-`cycle_limit` viene en $225; si tu plan tiene otro tope, cambialo primero (`cbudget limits set cycle_limit 200`).
+`cycle_limit` viene en $150; si tu plan tiene otro tope, cambialo primero (`cbudget limits set cycle_limit 200`).
 Los cambios se guardan en `~/.cursor/budget/config.json`, solo las claves que cambiaste.
+
+## El extra del plan
+
+Al pasar los $150 te pueden otorgar un extra de $75 y, excepcionalmente, otros $75. Cuando te lo otorgan, `cbudget
+extra` lo registra: el tope del ciclo pasa a $225, y con el excepcional a $300. Un tercero se rechaza con exit 1. Los
+extras viven en `~/.cursor/budget/extras.json`, terminan con su ciclo y cada uno queda en `changes.jsonl`
+(`cycle_extra`, el tope antes y después) con una notificación. El aviso del 100% del ciclo dice qué extra podés pedir,
+o que ya usaste los dos; el ciclo nunca frena prompts. El reporte muestra el tope con los extras
+(`Tope del plan $150.00 + extra $75.00`).
 
 `cbudget limits check` marca como **error** un aviso que no es menor que su bloqueo (el bloqueo llegaría sin aviso), y
 como **aviso** un tope diario mayor que el del ciclo, presupuestos por modelo que suman más que el ciclo, un patrón que

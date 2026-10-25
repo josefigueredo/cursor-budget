@@ -177,6 +177,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     lmod.add_argument("--remove", action="store_true")
     for name in ("block", "unblock"):
         lsub.add_parser(name, help=f"{name} a model pattern").add_argument("pattern")
+    ext = sub.add_parser("extra", help="register the plan's next extra for this cycle, once it was granted")
+    ext.add_argument("--by", default=None, help="who registers it, for changes.jsonl (default: terminal or agente)")
     sub.add_parser("install-hook", help="add cbudget to ~/.cursor/hooks.json")
     sub.add_parser("alias", help="add `alias cbudget=...` to ~/.zshrc (or ~/.bashrc)")
     sub.add_parser("notify-test", help="send a test notification, to check that macOS shows them")
@@ -216,6 +218,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
     if args.cmd == "limits":
         return limits_command(args)
+    if args.cmd == "extra":
+        actor = args.by or ("terminal" if sys.stdin.isatty() and sys.stdout.isatty() else "agente")
+        try:
+            got = budget.grant_extra(home=budget.HOME, actor=actor, notify=notify)
+        except ValueError as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        print(f"{got['name'].capitalize()} de ${got['usd']:.0f} quedó registrado: el tope del ciclo pasa de "
+              f"${got['before']:.2f} a ${got['after']:.2f}.")
+        return 0
     if args.cmd == "notify-test":
         notify("Prueba: así se ven los avisos de gasto de Cursor.")
         print(NOTIFY_HINT)
