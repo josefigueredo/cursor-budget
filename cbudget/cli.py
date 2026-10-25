@@ -17,15 +17,31 @@ HOOKS = Path.home() / ".cursor" / "hooks.json"
 EVENTS = ("stop", "beforeSubmitPrompt")
 
 
+OSASCRIPT = "/usr/bin/osascript"  # by full path: Cursor runs hooks with its own PATH
+
+
 def notify(message: str) -> None:
-    """A macOS notification; a failure here must never reach Cursor."""
+    """A macOS notification; a failure here must never reach Cursor, but it is logged to notify-errors.log so a
+    missing notification can be explained."""
     if os.environ.get("CURSOR_BUDGET_NO_NOTIFY"):
         return
-    script = f"display notification {json.dumps(message)} with title \"cursor-budget\""
+    # The message goes as an argument, not inside the script: AppleScript has no \u escapes, so an embedded
+    # "·" or "á" quoted by json.dumps was a syntax error and the notification never showed.
+    script = ["-e", "on run argv", "-e", "display notification (item 1 of argv) with title \"cursor-budget\"",
+              "-e", "end run"]
     try:
-        subprocess.run(["osascript", "-e", script], capture_output=True, timeout=5)
-    except (OSError, subprocess.SubprocessError):
-        pass
+        done = subprocess.run([OSASCRIPT, *script, message], capture_output=True, timeout=5)
+        error = f"exit {done.returncode}: {done.stderr.decode(errors='replace').strip()}" if done.returncode else ""
+    except (OSError, subprocess.SubprocessError) as exc:
+        error = f"{type(exc).__name__}: {exc}"
+    if error:
+        try:
+            budget.HOME.mkdir(parents=True, exist_ok=True)
+            with (budget.HOME / "notify-errors.log").open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"t": round(time.time()), "message": message, "error": error},
+                                    ensure_ascii=False) + "\n")
+        except OSError:
+            pass
 
 
 def hook(raw: str) -> dict:
@@ -122,7 +138,9 @@ def limits_command(args) -> int:
         if args.action is None:
             print(limits.show(color=color))
         elif args.action == "check":
-            problems = budget.check_limits(budget.config(), budget.known_models(budget.read_ledger()))
+            cfg = budget.config()
+            problems = budget.check_limits(cfg, budget.known_models(budget.read_ledger()),
+                                           budget.cycle_cap(cfg, budget.HOME, time.time()))
             for lvl, msg in problems:
                 print(f"{lvl}: {msg}")
             print("ok" if not problems else f"{len(problems)} problema(s)")
@@ -160,7 +178,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     cal = sub.add_parser("calibrate", help="billed vs estimated per model, from Cursor's usage CSV")
     cal.add_argument("csv", type=Path)
     sed = sub.add_parser("seed", help="this cycle's spend so far: from Cursor's usage CSV, or the amount its page shows")
-    sed.add_argument("csv", type=Path, nargs="?")
+    sed.add_argument("csv", type=Path, nargs="*", help="the usage CSV; given several (a glob), the newest one")
     sed.add_argument("--amount", help="what Cursor's Usage page shows, e.g. 84.30")
     lim = sub.add_parser("limits", help="show, check and change the limits")
     lim.add_argument("--color", choices=("auto", "always", "never"), default="auto")
@@ -195,7 +213,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(calibrate_report(args.csv))
         return 0
     if args.cmd == "seed":
-        if (args.csv is None) == (args.amount is None):
+        if bool(args.csv) == (args.amount is not None):
             print("indicá el CSV o --amount con lo que muestra la página de uso de Cursor", file=sys.stderr)
             return 2
         if args.amount is not None:
@@ -208,9 +226,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                   f"Desde ahora suma lo que vean los hooks.")
             return 0
         import csv
-        with args.csv.open(newline="", encoding="utf-8") as fh:
-            base = budget.seed(csv.DictReader(fh))
-        print(f"Ciclo desde {base['cycle_start']}: ${base['billed']:.2f} cobrado según el CSV")
+        path = max(args.csv, key=lambda p: p.stat().st_mtime)  # a re-download "(1)" is the newest
+        with path.open(newline="", encoding="utf-8") as fh:
+            base = budget.seed(csv.DictReader(fh), home=budget.HOME, now=time.time)
+        used = f" ({path.name}, el más nuevo de {len(args.csv)})" if len(args.csv) > 1 else ""
+        print(f"Ciclo desde {base['cycle_start']}: ${base['billed']:.2f} cobrado según el CSV{used}")
         return 0
     if args.cmd == "allow":
         until = budget.allow(args.minutes)

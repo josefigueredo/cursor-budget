@@ -104,13 +104,15 @@ def cycle_start(t: float, cycle_day: int) -> str:
 
 def cycle_total(entries: list, home: Path, t: float, cycle_day: int) -> tuple:
     """Spend this cycle: what Cursor billed up to the seeded CSV, plus the hook's estimates after it.
-    Returns (usd, seeded) where seeded says whether a baseline for this cycle exists."""
+    Returns (usd, complete): complete when a baseline for this cycle exists, or when the hooks were already counting
+    before the cycle started (an earlier seed or turn), so a seed is needed only once, at install."""
     start = cycle_start(t, cycle_day)
     base = load_json(home / "baseline.json", {})
     seeded = base.get("cycle_start") == start
     billed, until = (float(base.get("billed", 0)), float(base.get("until", 0))) if seeded else (0.0, 0.0)
     estimated = sum(e["usd"] for e in entries if e["t"] > until and day(e["t"]) >= start)
-    return round(billed + estimated, 4), seeded
+    counting_before = str(base.get("cycle_start") or "9999") < start or any(day(e["t"]) < start for e in entries)
+    return round(billed + estimated, 4), seeded or counting_before
 
 
 EXTRA_NAMES = ("el extra", "el extra excepcional")
@@ -414,8 +416,10 @@ def save_config(changes: dict, home: Path = HOME, now: Callable[[], float] = tim
     return merged
 
 
-def check_limits(cfg: dict, known_models: list) -> list:
-    """Problems in the effective config, as (level, message), level in error|warning."""
+def check_limits(cfg: dict, known_models: list, cap: Optional[float] = None) -> list:
+    """Problems in the effective config, as (level, message), level in error|warning. `cap` is the cycle cap with
+    the extras granted (cycle_cap); without it, the plan's cycle_limit."""
+    cap = float(cfg["cycle_limit"]) if cap is None else cap
     problems = []
     unknown = sorted(set(cfg) - set(DEFAULTS))
     if unknown:
@@ -424,13 +428,13 @@ def check_limits(cfg: dict, known_models: list) -> list:
         if float(cfg[warn]) >= float(cfg[block]):
             problems.append(("error", f"{warn} (${cfg[warn]:.2f}) no es menor que {block} (${cfg[block]:.2f}): "
                                       f"el bloqueo llega sin aviso previo"))
-    if float(cfg["block_day"]) > float(cfg["cycle_limit"]):
+    if float(cfg["block_day"]) > cap:
         problems.append(("warning", "block_day supera el tope del ciclo: nunca va a frenar antes que Cursor"))
     budgets = cfg.get("model_budgets") or {}
     total = sum(float(v) for v in budgets.values())
-    if total > float(cfg["cycle_limit"]):
+    if total > cap:
         problems.append(("warning", f"Los presupuestos por modelo suman ${total:.2f}, más que el tope del ciclo "
-                                    f"(${float(cfg['cycle_limit']):.2f})"))
+                                    f"(${cap:.2f})"))
     for pattern in budgets:
         if known_models and not any(fnmatch.fnmatch(m, pattern) for m in known_models):
             problems.append(("warning", f"El patrón {pattern!r} no coincide con ningún modelo usado este ciclo"))

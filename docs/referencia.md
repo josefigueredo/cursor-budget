@@ -20,6 +20,7 @@ cbudget limits block 'claude-opus-*'         # bloquea un patrón (unblock lo li
 cbudget allow --minutes 30   # levanta todos los bloqueos un rato
 cbudget seed --amount 84.30  # lo gastado este ciclo según la página de uso de Cursor
 cbudget seed usage.csv       # lo cobrado este ciclo según el CSV de Cursor, con el detalle por modelo y por día
+cbudget seed ~/Downloads/team-usage-events*.csv   # con varios archivos (un glob), usa el más nuevo
 cbudget extra                # registra el extra del plan que te otorgaron (+$75; otra vez, el excepcional)
 cbudget calibrate usage.csv  # cobrado contra estimado por modelo
 cbudget notify-test          # manda una notificación de prueba y explica cómo habilitarlas
@@ -72,13 +73,15 @@ detalle por modelo, así que los presupuestos cuentan desde ese momento.
 
 El hook no puede preguntarle a Cursor cuánto llevás: suma lo que ve. Para que el total del ciclo sea el de Cursor:
 
-- **Sin CSV:** el monto de "Your monthly usage" en cursor.com/dashboard → Usage (el primero de "$84.30 / $200") va a
-  `cbudget seed --amount 84.30`. Es la vía para quien no exporta archivos.
-- **Con CSV:** Usage → Export y `cbudget seed <csv>`. Guarda lo cobrado este ciclo, por modelo y por día; desde el
+- **Con CSV (la vía principal):** cursor.com/dashboard/usage, **MTD**, **Apply**, **Export CSV** y `cbudget seed <csv>`.
+  Guarda lo cobrado este ciclo, por modelo y por día, e ignora las filas de antes de que empiece el ciclo; desde el
   último evento del CSV suma las estimaciones del hook. Un turno que termina justo después de ese evento puede contarse
   dos veces (centavos).
+- **Sin CSV:** el monto de "Your monthly usage" va a `cbudget seed --amount 84.30`, sin el detalle por modelo.
 
-Si instalás el día que arranca el ciclo no hace falta ningún seed. Sin seed, el total cuenta desde la instalación y los
+El seed se hace **una sola vez**, al instalar. En los ciclos siguientes el total cuenta desde el día en que arrancan,
+porque los hooks ya venían contando; el reporte lo dice («Lo estimado por los hooks desde que empezó el ciclo»). Si
+instalás el día que arranca el ciclo no hace falta ningún seed. Sin seed, el total cuenta desde la instalación y los
 avisos lo dicen.
 
 ## Terminal y chat: un solo CLI

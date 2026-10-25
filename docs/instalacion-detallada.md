@@ -63,8 +63,9 @@ Manda una notificación y explica qué hacer si no aparece: Configuración del S
 
 ![Terminal: seed --amount, el tope del plan, un presupuesto, un valor inválido, el chequeo y edit sin terminal](img/terminal-uso.png)
 
-- `cbudget seed --amount 84,30` toma el monto de «Your monthly usage» en cursor.com/dashboard → Usage. Con el CSV de
-  Usage → Export, `cbudget seed usage.csv` trae además el detalle por modelo y por día.
+- `cbudget seed ~/Downloads/team-usage-events*.csv`, una sola vez: el CSV de cursor.com/dashboard/usage con **MTD** y
+  **Export CSV**, con el detalle por modelo y por día. Sin CSV, `cbudget seed --amount 84,30` toma el monto de «Your
+  monthly usage».
 - `cbudget limits set cycle_limit 200`, si tu plan no es de $150.
 - `cbudget extra`, cuando te otorgan el extra del plan: el tope del ciclo sube $75. Corrido otra vez registra el extra
   excepcional, otros $75. Los dos terminan con el ciclo.

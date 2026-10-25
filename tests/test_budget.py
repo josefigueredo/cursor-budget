@@ -112,6 +112,25 @@ class TestCycle(Home):
         self.run_stop(stop(input_tokens=10_000))
         self.assertEqual(self.notes, [])
 
+    NEXT_CYCLE = NOON + 10 * 86400  # 2026-11-03
+
+    def test_a_seed_is_needed_once_the_next_cycle_counts_from_its_start(self):
+        budget.seed_amount(84.30, home=self.home, now=lambda: NOON, cycle_day=1)
+        self.run_stop(stop(input_tokens=10_000), t=self.NEXT_CYCLE)
+        self.assertNotIn("cbudget seed", self.notes[-1])
+        total, counted = budget.cycle_total(budget.read_ledger(self.home), self.home, self.NEXT_CYCLE, 1)
+        self.assertTrue(counted)
+        self.assertLess(total, 1)
+        out = render.report(7, home=self.home, now=self.NEXT_CYCLE)
+        self.assertNotIn("Solo lo visto desde la instalación", out)
+        self.assertIn("desde que empezó el ciclo", out)
+
+    def test_hooks_running_before_the_cycle_started_also_count_it_whole(self):
+        self.run_stop(stop(input_tokens=10_000), t=NOON)  # no seed ever, but the hook was already counting
+        self.notes.clear()
+        self.run_stop(stop(input_tokens=10_000), t=self.NEXT_CYCLE)
+        self.assertNotIn("cbudget seed", self.notes[-1])
+
 
 class TestExtras(Home):
     TURN = stop(input_tokens=1_000_000, cache_read_tokens=1_000_000)  # ~$0.35
@@ -191,6 +210,37 @@ class TestExtras(Home):
         self.assertEqual(code, 1)
         self.assertIn("los 2 extras", out)
         self.assertEqual(json.loads((self.home / "changes.jsonl").read_text().splitlines()[0])["actor"], "agente")
+
+    def test_seed_with_several_csvs_takes_the_newest_and_says_which(self):
+        # a glob like team-usage-events*.csv matches a re-download "(1)" too
+        import contextlib, io, os
+        from unittest import mock
+        head = "Date,Model,Cost\n"
+        old, new = self.home / "team-usage-events.csv", self.home / "team-usage-events (1).csv"
+        old.write_text(head + "2026-10-20T12:00:00.000Z,claude-sonnet-5-5-high,10.00\n", encoding="utf-8")
+        new.write_text(head + "2026-10-20T12:00:00.000Z,claude-sonnet-5-5-high,30.00\n", encoding="utf-8")
+        os.utime(old, (NOON - 600, NOON - 600))
+        out = io.StringIO()
+        with mock.patch.object(budget, "HOME", self.home), mock.patch.object(budget.time, "time", lambda: NOON), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(["seed", str(old), str(new)]), 0)
+        self.assertIn("team-usage-events (1).csv", out.getvalue())
+        self.assertIn("$30.00", out.getvalue())
+
+    def test_the_check_compares_model_budgets_with_the_cap_including_extras(self):
+        (self.home / "config.json").write_text(json.dumps({"model_budgets": {"claude-*": 195}}), encoding="utf-8")
+        self.assertIn("suman $195.00", limits.show(home=self.home, color=False, now=NOON))
+        self.grant()
+        text = limits.show(home=self.home, color=False, now=NOON)
+        self.assertNotIn("suman $195.00", text)
+
+    def test_the_limits_screen_lists_each_extra_and_whether_it_was_registered(self):
+        self.grant()
+        text = limits.show(home=self.home, color=False, now=NOON)
+        self.assertIn("Extras del plan", text)
+        self.assertRegex(text, r"El extra\s+\$75\.00\s+registrado")
+        self.assertRegex(text, r"El extra excepcional\s+\$75\.00\s+sin registrar: `cbudget extra`")
+        self.assertIn("Tope del ciclo: $225.00", text)
 
     def test_the_report_counts_the_extra_in_the_cap(self):
         self.grant()
@@ -410,6 +460,35 @@ class TestCli(unittest.TestCase):
             self.assertTrue(cli.install_hook("/usr/bin/python3 /app/cbudget.py hook", path))
             hooks = json.loads(path.read_text())["hooks"]
             self.assertEqual([h["command"] for h in hooks["stop"]], ["/usr/bin/python3 /app/cbudget.py hook"])
+
+    def test_notify_calls_osascript_by_its_full_path_so_the_hook_path_does_not_matter(self):
+        import subprocess
+        from unittest import mock
+        with mock.patch.dict("os.environ", {"PATH": "/nonexistent"}), \
+                mock.patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")) as run:
+            cli.notify("hola")
+        self.assertEqual(run.call_args[0][0][0], "/usr/bin/osascript")
+
+    def test_notify_passes_the_message_as_is_so_accents_do_not_break_applescript(self):
+        # json.dumps turned "·" into ·, which AppleScript rejects with a syntax error (-2741)
+        import subprocess
+        from unittest import mock
+        message = 'turno ~$0.03 · ciclo "así" de $150'
+        with mock.patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")) as run:
+            cli.notify(message)
+        argv = run.call_args[0][0]
+        self.assertEqual(argv[-1], message)
+        self.assertFalse(any("\\u" in a for a in argv))
+
+    def test_a_failed_notification_is_logged_instead_of_lost(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(budget, "HOME", Path(tmp)), \
+                mock.patch.object(cli, "OSASCRIPT", "/nonexistent/osascript"):
+            cli.notify("hola")
+            [line] = (Path(tmp) / "notify-errors.log").read_text(encoding="utf-8").splitlines()
+        entry = json.loads(line)
+        self.assertEqual(entry["message"], "hola")
+        self.assertIn("nonexistent", entry["error"])
 
     def test_notify_test_sends_one_notification_and_says_how_to_allow_them(self):
         import contextlib, io

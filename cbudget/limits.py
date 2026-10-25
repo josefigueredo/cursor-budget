@@ -1,6 +1,7 @@
 """`cbudget limits`: show and check the limits, change them by flags (scripts, agents) or interactively (terminal)."""
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -20,7 +21,6 @@ def describe(key: str, value) -> str:
 
 
 def show(home: Path = budget.HOME, color: bool = False, now: Optional[float] = None, size: int = 100) -> str:
-    import time
     paint, now = Paint(color), time.time() if now is None else now
     cfg, ledger = budget.config(home), budget.read_ledger(home)
     custom = budget.user_config(home)
@@ -33,6 +33,16 @@ def show(home: Path = budget.HOME, color: bool = False, now: Optional[float] = N
                     + " " + paint(help_text, MUTED))
     rows += ["", paint("* cambiado en ~/.cursor/budget/config.json; el resto es el valor por defecto", MUTED)]
     out += card("Generales", rows, size, paint)
+
+    granted = budget.extras_granted(home, now, cfg["cycle_day"])
+    rows = []
+    for i, usd in enumerate(cfg["cycle_extras"]):
+        state = paint("registrado", GREEN) if i < len(granted) else paint("sin registrar: `cbudget extra`", MUTED)
+        rows.append(pad(paint(budget.extra_name(i).capitalize(), TEXT), 22)
+                    + paint(f"{money(float(usd)):>10s}", TEXT, bold=True) + "   " + state)
+    rows += ["", paint(f"Tope del ciclo: {money(budget.cycle_cap(cfg, home, now))}. Se registran cuando te los "
+                       f"otorgan y terminan con el ciclo.", MUTED)]
+    out += card("Extras del plan (ciclo)", rows, size, paint)
 
     budgets = cfg["model_budgets"]
     if budgets:
@@ -53,7 +63,7 @@ def show(home: Path = budget.HOME, color: bool = False, now: Optional[float] = N
     blocked = cfg["blocked_models"]
     out += card("Modelos bloqueados", [paint(", ".join(blocked) if blocked else "Ninguno", TEXT)], size, paint)
 
-    problems = budget.check_limits(cfg, budget.known_models(ledger, home))
+    problems = budget.check_limits(cfg, budget.known_models(ledger, home), budget.cycle_cap(cfg, home, now))
     rows = [paint("● ", RED if lvl == "error" else AMBER) + paint(msg, TEXT) for lvl, msg in problems] or \
         [paint("● ", GREEN) + paint("Sin problemas: los límites son coherentes entre sí.", TEXT)]
     out += card("Chequeo", rows, size, paint)
@@ -161,7 +171,8 @@ def edit(home: Path = budget.HOME, ask: Callable[[str], str] = input, say: Calla
         else:
             say(f"  bloqueados: {', '.join(before) or 'ninguno'} -> {', '.join(value) or 'ninguno'}")
     merged = {**cfg, **changes}
-    for lvl, msg in budget.check_limits(merged, budget.known_models(budget.read_ledger(home), home)):
+    cap = budget.cycle_cap(merged, home, time.time())
+    for lvl, msg in budget.check_limits(merged, budget.known_models(budget.read_ledger(home), home), cap):
         say(f"  {'error' if lvl == 'error' else 'aviso'}: {msg}")
     if ask("¿Guardar? [s/N]: ").strip().lower() not in ("s", "si", "sí", "y", "yes"):
         say("No se guardó nada.")

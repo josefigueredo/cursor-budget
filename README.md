@@ -12,7 +12,7 @@ sin que llegue al modelo, con costo cero.
 | *«Poné un presupuesto de 40 dólares para Opus en este ciclo»* | `cbudget limits model 'claude-opus-*' 40`: avisa al 80% y bloquea Opus al agotarlo |
 | *«Bloqueá GPT»* / *«Desbloqueá Opus High»* | `cbudget limits block 'gpt-*'` / `cbudget limits unblock 'claude-opus-*-high'` |
 | *«Levantá el bloqueo media hora»* | `cbudget allow --minutes 30`, solo porque se lo pediste |
-| *«Cursor dice que llevo 84,30 este mes»* | `cbudget seed --amount 84,30`: desde ahí el total del ciclo es el de Cursor más lo que ve el hook |
+| *«Cargá el CSV de uso que bajé de Cursor: ~/Downloads/team-usage-events….csv»* | `cbudget seed <csv>`, una sola vez al instalar: desde ahí el total del ciclo es el de Cursor más lo que ven los hooks |
 
 **La skill nunca sube un límite, desbloquea ni corre `allow` por su cuenta**, aunque un bloqueo le corte la tarea. Cada
 cambio queda anotado con quién lo hizo y sale una notificación. Lo que no puede ver está en
@@ -51,7 +51,7 @@ presupuesto de cada modelo y el gasto por día. El recorrido completo está en e
 
 ```bash
 gh api repos/josefigueredo/cursor-budget/contents/bootstrap.sh -H "Accept: application/vnd.github.raw" | bash
-cbudget seed --amount 84.30   # en una terminal nueva: lo que dice cursor.com/dashboard → Usage
+cbudget seed ~/Downloads/team-usage-events*.csv   # en una terminal nueva, una vez: el CSV de cursor.com/dashboard/usage (MTD, Export CSV)
 cbudget report
 ```
 

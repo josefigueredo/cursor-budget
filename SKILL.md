@@ -28,11 +28,14 @@ python3 ~/.cursor/budget/app/cbudget.py
 Answer with the numbers that matter, not the whole screen. The cycle total is the seeded amount plus the hooks'
 estimate since; say so when it matters.
 
-If the report says it only counts since installation (nothing seeded this cycle), the total is short by whatever was
-spent before. Ask the user for the number on Cursor's Usage page (cursor.com/dashboard, "Your monthly usage", the
-first amount of "$84.30 / $200") and run `cb seed --amount <that number>`. That is the no-CSV path, meant for
-people who do not export files. When they also give the second amount (their plan's cap) and it differs from
-`cycle_limit`, set it too with `cb limits set cycle_limit <cap>`: they asked for it by giving it. A CSV (`cb seed <csv>`) adds the split per model and per day; use it when they have one.
+The seed is done once, at install: after it the hooks count every turn, also in later cycles, so never ask for it
+again. When the user gives you a usage CSV path (`team-usage-events….csv`), run `cb seed <path>`. If the report says
+it only counts since installation (nothing seeded yet), the total is short by whatever was spent before: ask for the
+CSV, in these words, because the user may not be technical: open cursor.com/dashboard/usage, tap **MTD** and then
+**Apply**, tap **Export CSV**, and drag the downloaded file into the chat. If they would rather not, the number of
+"Your monthly usage" works too: `cb seed --amount <that number>`, without the split per model. When they also give
+their plan's cap and it differs from `cycle_limit`, set it with `cb limits set cycle_limit <cap>`: they asked for it
+by giving it.
 
 ## Change
 
