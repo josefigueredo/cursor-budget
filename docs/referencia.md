@@ -20,6 +20,7 @@ cbudget limits block 'claude-opus-*'         # bloquea un patrón (unblock lo li
 cbudget allow --minutes 30   # levanta todos los bloqueos un rato
 cbudget seed --amount 84.30  # lo gastado este ciclo según la página de uso de Cursor
 cbudget seed usage.csv       # lo cobrado este ciclo según el CSV de Cursor, con el detalle por modelo y por día
+cbudget seed ~/Downloads/team-usage-events*.csv   # con varios archivos (un glob), usa el más nuevo
 cbudget extra                # registra el extra del plan que te otorgaron (+$75; otra vez, el excepcional)
 cbudget calibrate usage.csv  # cobrado contra estimado por modelo
 cbudget notify-test          # manda una notificación de prueba y explica cómo habilitarlas
