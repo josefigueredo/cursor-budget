@@ -76,11 +76,29 @@
             },
             {
               "kind": "box",
+              "match": "extensión de Cursor instalada",
+              "text": "la barra del editor"
+            },
+            {
+              "kind": "box",
+              "match": "statusLine de cursor-agent",
+              "text": "el pie de cursor-agent"
+            },
+            {
+              "kind": "box",
               "match": "Mandé una notificación de prueba.",
               "text": "¿la viste?"
             }
           ],
-          "notes": "Una sola línea. gh pone tu sesión de GitHub porque el repo es interno: un curl suelto recibe 404. El instalador copia el programa a su propia carpeta, suma dos hooks a Cursor sin tocar los que ya tenías, agrega el alias cbudget y deja la skill a mano de Cursor, Claude Code y Codex. Al final manda una notificación de prueba: preguntá si la vieron, porque todos los avisos llegan así. Paso inferido: necesita red."
+          "notes": "Una sola línea. gh pone tu sesión de GitHub porque el repo es interno: un curl suelto recibe 404. El instalador copia el programa a su propia carpeta, suma dos hooks a Cursor sin tocar los que ya tenías, agrega el alias cbudget y deja la skill a mano de Cursor, Claude Code y Codex. Además instala dos cosas para ver el gasto sin preguntar: una extensión que lo muestra en la barra de estado del editor de Cursor (en Cursor 3, el botón IDE; la ventana de Agentes no tiene barra), y el pie de cursor-agent, si lo usás. No hay que instalar nada aparte. Al final manda una notificación de prueba: preguntá si la vieron, porque todos los avisos llegan así. Paso inferido: necesita red; la salida es la del instalador real."
+        },
+        {
+          "type": "term",
+          "cmd": "mkdir -p ~/.cursor && echo '{\"version\": 1}' > ~/.cursor/cli-config.json",
+          "out": [],
+          "source": "real",
+          "cwd": "~",
+          "capture_only": true
         },
         {
           "type": "term",
@@ -591,6 +609,25 @@
             {
               "kind": "note",
               "text": "**Te avisa cuando sale una versión nueva.** Para actualizar: «actualizá cursor-budget»."
+            }
+          ]
+        },
+        {
+          "type": "term",
+          "cmd": "python3 ~/.cursor/budget/app/cbudget.py update",
+          "out": [],
+          "source": "inferido",
+          "cwd": "~",
+          "notes": "Cuando sale una versión nueva te llega una notificación: Hay una versión nueva de cursor-budget. Para actualizar, le decís al agente actualizá cursor-budget, o corrés cbudget update. Es la misma instalación: reemplaza el programa, la extensión y el pie, y respeta tus límites, tu registro y lo cargado del ciclo. Después recargá Cursor para que tome la extensión nueva. Paso inferido: necesita red; la salida es la del instalador real.",
+          "callouts": [
+            {
+              "kind": "note",
+              "text": "**Llegó el aviso de versión nueva.** Esto mismo hace el agente si le decís «actualizá cursor-budget»."
+            },
+            {
+              "kind": "box",
+              "match": "copiado en",
+              "text": "tus límites y tu registro no se tocan"
             }
           ]
         },
