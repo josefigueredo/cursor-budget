@@ -416,8 +416,10 @@ def save_config(changes: dict, home: Path = HOME, now: Callable[[], float] = tim
     return merged
 
 
-def check_limits(cfg: dict, known_models: list) -> list:
-    """Problems in the effective config, as (level, message), level in error|warning."""
+def check_limits(cfg: dict, known_models: list, cap: Optional[float] = None) -> list:
+    """Problems in the effective config, as (level, message), level in error|warning. `cap` is the cycle cap with
+    the extras granted (cycle_cap); without it, the plan's cycle_limit."""
+    cap = float(cfg["cycle_limit"]) if cap is None else cap
     problems = []
     unknown = sorted(set(cfg) - set(DEFAULTS))
     if unknown:
@@ -426,13 +428,13 @@ def check_limits(cfg: dict, known_models: list) -> list:
         if float(cfg[warn]) >= float(cfg[block]):
             problems.append(("error", f"{warn} (${cfg[warn]:.2f}) no es menor que {block} (${cfg[block]:.2f}): "
                                       f"el bloqueo llega sin aviso previo"))
-    if float(cfg["block_day"]) > float(cfg["cycle_limit"]):
+    if float(cfg["block_day"]) > cap:
         problems.append(("warning", "block_day supera el tope del ciclo: nunca va a frenar antes que Cursor"))
     budgets = cfg.get("model_budgets") or {}
     total = sum(float(v) for v in budgets.values())
-    if total > float(cfg["cycle_limit"]):
+    if total > cap:
         problems.append(("warning", f"Los presupuestos por modelo suman ${total:.2f}, más que el tope del ciclo "
-                                    f"(${float(cfg['cycle_limit']):.2f})"))
+                                    f"(${cap:.2f})"))
     for pattern in budgets:
         if known_models and not any(fnmatch.fnmatch(m, pattern) for m in known_models):
             problems.append(("warning", f"El patrón {pattern!r} no coincide con ningún modelo usado este ciclo"))

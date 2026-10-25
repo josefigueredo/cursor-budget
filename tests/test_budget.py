@@ -211,6 +211,13 @@ class TestExtras(Home):
         self.assertIn("los 2 extras", out)
         self.assertEqual(json.loads((self.home / "changes.jsonl").read_text().splitlines()[0])["actor"], "agente")
 
+    def test_the_check_compares_model_budgets_with_the_cap_including_extras(self):
+        (self.home / "config.json").write_text(json.dumps({"model_budgets": {"claude-*": 195}}), encoding="utf-8")
+        self.assertIn("suman $195.00", limits.show(home=self.home, color=False, now=NOON))
+        self.grant()
+        text = limits.show(home=self.home, color=False, now=NOON)
+        self.assertNotIn("suman $195.00", text)
+
     def test_the_limits_screen_lists_each_extra_and_whether_it_was_registered(self):
         self.grant()
         text = limits.show(home=self.home, color=False, now=NOON)
