@@ -65,7 +65,7 @@ Manda una notificación y explica qué hacer si no aparece: Configuración del S
 
 - `cbudget seed --amount 84,30` toma el monto de «Your monthly usage» en cursor.com/dashboard → Usage. Con el CSV de
   Usage → Export, `cbudget seed usage.csv` trae además el detalle por modelo y por día.
-- `cbudget limits set cycle_limit 200`, si tu plan no es de .
+- `cbudget limits set cycle_limit 200`, si tu plan no es de $150.
 - `cbudget limits model 'claude-opus-*' 40` le da a Opus un presupuesto del ciclo.
 - Un valor que no es número sale con 2 y no cambia nada. `cbudget limits check` sale con 1 si los límites se
   contradicen; en la captura, un aviso diario más alto que el bloqueo.
