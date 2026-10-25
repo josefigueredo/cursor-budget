@@ -112,6 +112,25 @@ class TestCycle(Home):
         self.run_stop(stop(input_tokens=10_000))
         self.assertEqual(self.notes, [])
 
+    NEXT_CYCLE = NOON + 10 * 86400  # 2026-11-03
+
+    def test_a_seed_is_needed_once_the_next_cycle_counts_from_its_start(self):
+        budget.seed_amount(84.30, home=self.home, now=lambda: NOON, cycle_day=1)
+        self.run_stop(stop(input_tokens=10_000), t=self.NEXT_CYCLE)
+        self.assertNotIn("cbudget seed", self.notes[-1])
+        total, counted = budget.cycle_total(budget.read_ledger(self.home), self.home, self.NEXT_CYCLE, 1)
+        self.assertTrue(counted)
+        self.assertLess(total, 1)
+        out = render.report(7, home=self.home, now=self.NEXT_CYCLE)
+        self.assertNotIn("Solo lo visto desde la instalación", out)
+        self.assertIn("desde que empezó el ciclo", out)
+
+    def test_hooks_running_before_the_cycle_started_also_count_it_whole(self):
+        self.run_stop(stop(input_tokens=10_000), t=NOON)  # no seed ever, but the hook was already counting
+        self.notes.clear()
+        self.run_stop(stop(input_tokens=10_000), t=self.NEXT_CYCLE)
+        self.assertNotIn("cbudget seed", self.notes[-1])
+
 
 class TestExtras(Home):
     TURN = stop(input_tokens=1_000_000, cache_read_tokens=1_000_000)  # ~$0.35

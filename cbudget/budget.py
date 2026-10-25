@@ -104,13 +104,15 @@ def cycle_start(t: float, cycle_day: int) -> str:
 
 def cycle_total(entries: list, home: Path, t: float, cycle_day: int) -> tuple:
     """Spend this cycle: what Cursor billed up to the seeded CSV, plus the hook's estimates after it.
-    Returns (usd, seeded) where seeded says whether a baseline for this cycle exists."""
+    Returns (usd, complete): complete when a baseline for this cycle exists, or when the hooks were already counting
+    before the cycle started (an earlier seed or turn), so a seed is needed only once, at install."""
     start = cycle_start(t, cycle_day)
     base = load_json(home / "baseline.json", {})
     seeded = base.get("cycle_start") == start
     billed, until = (float(base.get("billed", 0)), float(base.get("until", 0))) if seeded else (0.0, 0.0)
     estimated = sum(e["usd"] for e in entries if e["t"] > until and day(e["t"]) >= start)
-    return round(billed + estimated, 4), seeded
+    counting_before = str(base.get("cycle_start") or "9999") < start or any(day(e["t"]) < start for e in entries)
+    return round(billed + estimated, 4), seeded or counting_before
 
 
 EXTRA_NAMES = ("el extra", "el extra excepcional")
