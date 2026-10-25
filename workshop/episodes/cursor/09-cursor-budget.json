@@ -13,7 +13,7 @@
   },
   "skill": {
     "repo": "cursor-budget",
-    "commit": "a111d8b",
+    "commit": "ffda72f",
     "date": "2026-10-25"
   },
   "workspace": {
@@ -276,6 +276,19 @@
           "source": "real",
           "cwd": "~",
           "capture_only": true
+        },
+        {
+          "type": "page",
+          "title": "Cursor — barra de estado",
+          "src": "pages/cursor-budget-barra.html",
+          "source": "inferido",
+          "callouts": [
+            {
+              "kind": "note",
+              "text": "**Siempre a la vista.** Abajo a la derecha: lo de hoy y lo del ciclo. Amarillo cerca de un aviso, rojo en un bloqueo."
+            }
+          ],
+          "notes": "Esto lo instala cursor-budget solo: una extensión chica en la barra de estado de Cursor. Muestra lo que gastaste hoy contra el tope diario, y lo del ciclo contra el tope del plan. Se pone amarilla cuando pasás un aviso y roja cuando llegás a un bloqueo. Un clic abre el reporte. Si recién lo instalaste y no la ves, recargá la ventana."
         },
         {
           "type": "ask",
@@ -543,6 +556,34 @@
           "cwd": "~",
           "color": true,
           "notes": "Solo los problemas. Sale con 1 si hay un error, así que sirve también en un script."
+        },
+        {
+          "type": "term",
+          "cmd": "echo '{\"model\":{\"display_name\":\"Sonnet 5.5\"},\"context_window\":{\"used_percentage\":34}}' | python3 ~/.cursor/budget/app/cbudget.py statusline",
+          "out": [],
+          "source": "real",
+          "cwd": "~",
+          "notes": "Si usás Cursor en la terminal, con cursor-agent, esta línea queda en el pie: el modelo, cuánto del contexto usaste y el mismo gasto de la barra. La pone el instalador; acá la pedimos a mano para verla.",
+          "callouts": [
+            {
+              "kind": "note",
+              "text": "**El pie de cursor-agent.** Esta misma línea queda abajo de todo cuando usás Cursor en la terminal."
+            }
+          ]
+        },
+        {
+          "type": "term",
+          "cmd": "python3 ~/.cursor/budget/app/cbudget.py version",
+          "out": [],
+          "source": "real",
+          "cwd": "~",
+          "notes": "cursor-budget sabe qué versión tenés. Una vez por día se fija si hay una nueva y, si la hay, te manda una notificación una sola vez. Para actualizar le decís al agente: actualizá cursor-budget.",
+          "callouts": [
+            {
+              "kind": "note",
+              "text": "**Te avisa cuando sale una versión nueva.** Para actualizar: *«actualizá cursor-budget»*."
+            }
+          ]
         },
         {
           "type": "term",
