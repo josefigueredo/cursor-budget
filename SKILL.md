@@ -47,6 +47,7 @@ the user's call, and they see every change in a notification and in `~/.cursor/b
 | Remove a model's budget | `cb limits model '<pattern>' --remove` |
 | Block or unblock a model | `cb limits block '<pattern>'` / `cb limits unblock '<pattern>'` |
 | Lift every block for a while | `cb allow --minutes <n>` |
+| They say the plan's extra was granted ("me otorgaron el extra") | `cb extra`: the first adds $75 to the cycle cap, the second the exceptional $75; a third is refused. Only when they say it was granted, never to get past the cycle warning |
 | Load what Cursor shows as spent this cycle | `cb seed --amount <usd>` (or `cb seed <csv>` with an exported usage CSV) |
 | A test notification, or they get no warnings | `cb notify-test`, then relay its hint about System Settings |
 | Update cursor-budget | `gh api repos/josefigueredo/cursor-budget/contents/bootstrap.sh -H "Accept: application/vnd.github.raw" \| bash` (keeps their limits, ledger and seed) |
