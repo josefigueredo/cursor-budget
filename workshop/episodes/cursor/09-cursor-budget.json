@@ -33,6 +33,27 @@
   },
   "chapters": [
     {
+      "id": "portada",
+      "title": "cursor-budget",
+      "subtitle": "Tu gasto de Cursor a la vista, con avisos y un freno",
+      "screen": "terminal",
+      "steps": [
+        {
+          "type": "page",
+          "title": "cursor-budget — índice",
+          "src": "pages/cursor-budget-indice.html",
+          "source": "inferido",
+          "callouts": [
+            {
+              "kind": "note",
+              "text": "**Siete partes.** Empezamos por instalarlo."
+            }
+          ],
+          "notes": "El recorrido: instalarlo, cargar lo que ya gastaste, verlo en el editor y en la terminal, cuándo frena, el presupuesto por modelo y qué hacer si algo falla."
+        }
+      ]
+    },
+    {
       "id": "instalar",
       "title": "Instalar",
       "subtitle": "Una línea, una vez por máquina",
