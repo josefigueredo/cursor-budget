@@ -21,4 +21,3 @@ else
 fi
 
 bash "$TMP/repo/install.sh"
-echo "Listo. Abrí una terminal nueva y probá: cbudget report"

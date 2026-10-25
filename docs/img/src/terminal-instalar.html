@@ -7,17 +7,33 @@
 .term{background:#16161a;color:#e6e6ea;font:13.5px/1.5 Menlo,Monaco,monospace;padding:14px 18px 18px;white-space:pre-wrap;word-break:break-word}
 .p{color:#7ee787}.c{color:#7d8590}.o{color:#e6e6ea}.k{color:#79c0ff}.a{color:#d2a8ff}.u{color:#ffa657}</style><div class="win" style="width:1196px"><div class="bar"><div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div><div class="ttl">zsh — ~/cursor-budget</div></div><div class="term"><span class="c"># Una línea: gh api baja bootstrap.sh del repo interno y lo corre. Acá CURSOR_BUDGET_REPO clona esta copia en vez de GitHub.</span>
 <span class="p">$</span> <span class="k">CURSOR_BUDGET_REPO=file://$PWD bash bootstrap.sh</span>
-<span class="o">copiado en ~/.cursor/budget/app</span>
-<span class="o">hook instalado</span>
-<span class="o">alias agregado en ~/.zshrc; abrí otra terminal o corré: source ~/.zshrc</span>
-<span class="o">skill: cursor-budget (Cursor, Claude Code, Codex) -&gt; ~/.cursor/budget/app</span>
-<span class="o">Listo. Abrí una terminal nueva y probá: cbudget report</span>
+<span class="o"></span>
+<span class="o">cursor-budget c23a0d8 · instalación nueva</span>
+<span class="o"></span>
+<span class="o">  ✓ Programa         en ~/.cursor/budget/app</span>
+<span class="o">  ✓ Hooks            stop y beforeSubmitPrompt sumados a ~/.cursor/hooks.json, sin tocar los demás</span>
+<span class="o">  ✓ Alias            cbudget agregado en ~/.zshrc (abrí una terminal nueva)</span>
+<span class="o">  ✓ Skill            para Cursor, Claude Code y Codex</span>
+<span class="o">  · cursor-agent     no lo usás en esta máquina</span>
+<span class="o">  · Barra de Cursor  omitida (CURSOR_BUDGET_NO_EXTENSION)</span>
+<span class="o"></span>
+<span class="o">Listo. Qué sigue:</span>
+<span class="o">  1. Abrí una terminal nueva y probá: cbudget report</span>
+<span class="o">  2. Para cargar lo que ya gastaste este mes, pedíselo al agente: «cargá mi CSV de uso de Cursor».</span>
 <span class="c"># Con el repo clonado: el mismo instalador. Volver a correrlo actualiza la copia y no toca tus datos.</span>
 <span class="p">$</span> <span class="k">./install.sh</span>
-<span class="o">copiado en ~/.cursor/budget/app</span>
-<span class="o">el hook ya estaba instalado</span>
-<span class="o">el alias ya estaba en ~/.zshrc</span>
-<span class="o">skill: cursor-budget (Cursor, Claude Code, Codex) -&gt; ~/.cursor/budget/app</span>
+<span class="o"></span>
+<span class="o">cursor-budget c23a0d8 · ya tenías esta versión: la reinstalé</span>
+<span class="o"></span>
+<span class="o">  ✓ Programa         en ~/.cursor/budget/app (tus límites, registro y seed quedan como estaban)</span>
+<span class="o">  ✓ Hooks            stop y beforeSubmitPrompt, ya estaban en ~/.cursor/hooks.json</span>
+<span class="o">  ✓ Alias            cbudget, ya estaba en ~/.zshrc</span>
+<span class="o">  ✓ Skill            para Cursor, Claude Code y Codex</span>
+<span class="o">  · cursor-agent     no lo usás en esta máquina</span>
+<span class="o">  · Barra de Cursor  omitida (CURSOR_BUDGET_NO_EXTENSION)</span>
+<span class="o"></span>
+<span class="o">Listo. Qué sigue:</span>
+<span class="o">  1. Abrí una terminal nueva y probá: cbudget report</span>
 <span class="p">$</span> <span class="k">readlink ~/.agents/skills/cursor-budget ~/.claude/skills/cursor-budget</span>
 <span class="o">~/.cursor/budget/app</span>
 <span class="o">../../.agents/skills/cursor-budget</span>

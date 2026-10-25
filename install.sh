@@ -27,6 +27,31 @@ esac
   exit 1
 }
 PY=/usr/bin/python3
+
+# The output is a checklist: one row per part, ✓ done, · left as it was (optional), ✗ failed; then what to do next.
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  G=$'\033[32m' Y=$'\033[33m' R=$'\033[31m' B=$'\033[1m' D=$'\033[2m' N=$'\033[0m'
+else
+  G="" Y="" R="" B="" D="" N=""
+fi
+status=0
+TILDE='~'
+short() { printf '%s' "${1//"$HOME"/$TILDE}"; }
+row() { printf '  %s %-16s %s\n' "$1" "$2" "$(short "$3")"; }
+ok() { row "${G}✓${N}" "$1" "$2"; }
+skip() { row "${Y}·${N}" "$1" "$2"; }
+fail() { row "${R}✗${N}" "$1" "$2"; status=1; }
+
+before="$(head -c 7 "$DEST/VERSION" 2>/dev/null || true)"
+now="$(git -C "$REPO" rev-parse --short=7 HEAD 2>/dev/null || true)"
+if [ -z "$before" ] && [ ! -e "$DEST" ]; then what="instalación nueva"
+elif [ -z "$before" ]; then what="actualización (la versión anterior no estaba registrada)"
+elif [ "$before" = "$now" ]; then what="ya tenías esta versión: la reinstalé"
+else what="actualización de $before a $now"; fi
+echo
+echo "${B}cursor-budget${N} ${now:-sin versión} ${D}· $what${N}"
+echo
+
 rm -rf "$DEST.new"
 mkdir -p "$DEST.new"
 cp "$REPO/cbudget.py" "$REPO/SKILL.md" "$DEST.new/"
@@ -38,44 +63,77 @@ rm -rf "$DEST.old"
 [ -e "$DEST" ] && mv "$DEST" "$DEST.old"
 mv "$DEST.new" "$DEST"
 rm -rf "$DEST.old"
-echo "copiado en $DEST"
+if [ -z "$before" ] && [ "$what" = "instalación nueva" ]; then ok "Programa" "en $DEST"
+else ok "Programa" "en $DEST (tus límites, registro y seed quedan como estaban)"; fi
+
+if out="$("$PY" "$DEST/cbudget.py" install-hook 2>&1)"; then
+  case "$out" in *ya*) ok "Hooks" "stop y beforeSubmitPrompt, ya estaban en ~/.cursor/hooks.json" ;;
+                 *) ok "Hooks" "stop y beforeSubmitPrompt sumados a ~/.cursor/hooks.json, sin tocar los demás" ;; esac
+else fail "Hooks" "$out"; fi
+
+if out="$("$PY" "$DEST/cbudget.py" alias 2>&1)"; then
+  rc="${out##* en }"; rc="${rc%%;*}"
+  case "$out" in *ya*) ok "Alias" "cbudget, ya estaba en $rc" ;; *) ok "Alias" "cbudget agregado en $rc (abrí una terminal nueva)" ;; esac
+else fail "Alias" "$out"; fi
 
 link() {  # link <target> <path>: create or refresh a symlink, never replace a real file or directory
   if [ -e "$2" ] && [ ! -L "$2" ]; then
-    echo "no reemplazo $2: no es un symlink; movelo y volvé a correr" >&2
+    echo "no reemplazo $2: no es un symlink; movelo y volvé a correr"
     return 1
   fi
   mkdir -p "$(dirname "$2")"
   ln -sfn "$1" "$2"
 }
+skill_err=""
+skill_err+="$(link "$DEST" "$HOME/.agents/skills/cursor-budget")"
+for host in .claude .codex; do
+  skill_err+="$(link "../../.agents/skills/cursor-budget" "$HOME/$host/skills/cursor-budget")"
+done
+if [ -z "$skill_err" ]; then ok "Skill" "para Cursor, Claude Code y Codex"; else fail "Skill" "$skill_err"; fi
 
-status=0
-"$PY" "$DEST/cbudget.py" install-hook || status=1
-"$PY" "$DEST/cbudget.py" alias || status=1
 # cursor-agent's footer: optional, so a status line of the user's own is a note, not a failed install
 if [ -f "$HOME/.cursor/cli-config.json" ]; then
-  "$PY" "$DEST/cbudget.py" statusline install || echo "(la línea de cursor-agent quedó como estaba)"
+  if out="$("$PY" "$DEST/cbudget.py" statusline install 2>&1)"; then
+    case "$out" in *ya*) ok "cursor-agent" "el gasto en el pie, ya estaba" ;;
+                   *) ok "cursor-agent" "el gasto en el pie (cerrá y volvé a abrir cursor-agent)" ;; esac
+  else skip "cursor-agent" "tenías tu propio pie: lo dejé como estaba"; fi
+else
+  skip "cursor-agent" "no lo usás en esta máquina"
 fi
-link "$DEST" "$HOME/.agents/skills/cursor-budget" || status=1
-for host in .claude .codex; do
-  link "../../.agents/skills/cursor-budget" "$HOME/$host/skills/cursor-budget" || status=1
-done
-echo "skill: cursor-budget (Cursor, Claude Code, Codex) -> $DEST"
+
 # Cursor's status bar: optional too, since an organization may allow only approved extensions
 # (CURSOR_BUDGET_NO_EXTENSION=1 skips it, for tests and captures)
 # the app's own CLI first: a `cursor` on PATH can be a shim that re-execs itself when HOME is not the usual one
 CURSOR_CLI="/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
 [ -x "$CURSOR_CLI" ] || CURSOR_CLI="$(command -v cursor || true)"
-if [ -z "${CURSOR_BUDGET_NO_EXTENSION:-}" ] && [ -x "$CURSOR_CLI" ]; then
-  if VSIX="$("$PY" "$REPO/vscode/build_vsix.py" "$DEST/vscode")" \
-      && "$CURSOR_CLI" --install-extension "$VSIX" --force >/dev/null 2>&1; then
-    echo "extensión de Cursor instalada: el gasto aparece en la barra de estado del editor (IDE ↗; si no, Developer: Reload Window)"
-  else
-    echo "(no pude instalar la extensión de Cursor; podés hacerlo a mano con Extensions: Install from VSIX… y ${VSIX:-vscode/})"
-  fi
+extension=""
+if [ -n "${CURSOR_BUDGET_NO_EXTENSION:-}" ]; then
+  skip "Barra de Cursor" "omitida (CURSOR_BUDGET_NO_EXTENSION)"
+elif [ ! -x "$CURSOR_CLI" ]; then
+  skip "Barra de Cursor" "no encontré Cursor instalado"
+elif VSIX="$("$PY" "$REPO/vscode/build_vsix.py" "$DEST/vscode")" \
+    && "$CURSOR_CLI" --install-extension "$VSIX" --force >/dev/null 2>&1; then
+  ok "Barra de Cursor" "extensión con el gasto en la barra del editor"
+  extension=yes
+else
+  skip "Barra de Cursor" "no pude instalar la extensión: Extensions: Install from VSIX… con ${VSIX:-vscode/}"
 fi
+
 # the warnings arrive as macOS notifications; one now shows whether they are allowed (CURSOR_BUDGET_NO_NOTIFY=1 skips it)
+notified=""
 if [ "$(uname)" = Darwin ] && [ -z "${CURSOR_BUDGET_NO_NOTIFY:-}" ]; then
-  "$PY" "$DEST/cbudget.py" notify-test || status=1
+  if "$PY" "$DEST/cbudget.py" notify-test >/dev/null 2>&1; then
+    ok "Avisos" "te mandé una notificación de prueba"
+    notified=yes
+  else fail "Avisos" "no pude mandar la notificación de prueba: cbudget notify-test"; fi
 fi
+
+echo
+if [ "$status" = 0 ]; then echo "${B}Listo.${N} Qué sigue:"; else echo "${R}${B}Algo falló${N} (las filas con ✗). Lo demás quedó instalado. Qué sigue:"; fi
+n=1
+step() { echo "  $n. $1"; n=$((n + 1)); }
+step "Abrí una terminal nueva y probá: ${B}cbudget report${N}"
+[ -n "$extension" ] && step "En Cursor: Cmd+Shift+P → ${B}Developer: Reload Window${N}. El gasto queda abajo a la derecha del editor (botón IDE ↗)."
+[ -n "$notified" ] && step "¿No viste la notificación? Configuración del Sistema → Notificaciones → Script Editor → Permitir notificaciones."
+[ "$what" = "instalación nueva" ] && step "Para cargar lo que ya gastaste este mes, pedíselo al agente: «cargá mi CSV de uso de Cursor»."
 exit "$status"
