@@ -35,7 +35,8 @@ else
   G="" Y="" R="" B="" D="" N=""
 fi
 status=0
-short() { printf '%s' "${1//"$HOME"/\~}"; }
+TILDE='~'
+short() { printf '%s' "${1//"$HOME"/$TILDE}"; }
 row() { printf '  %s %-16s %s\n' "$1" "$2" "$(short "$3")"; }
 ok() { row "${G}✓${N}" "$1" "$2"; }
 skip() { row "${Y}·${N}" "$1" "$2"; }
