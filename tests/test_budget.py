@@ -411,6 +411,24 @@ class TestCli(unittest.TestCase):
             hooks = json.loads(path.read_text())["hooks"]
             self.assertEqual([h["command"] for h in hooks["stop"]], ["/usr/bin/python3 /app/cbudget.py hook"])
 
+    def test_notify_calls_osascript_by_its_full_path_so_the_hook_path_does_not_matter(self):
+        import subprocess
+        from unittest import mock
+        with mock.patch.dict("os.environ", {"PATH": "/nonexistent"}), \
+                mock.patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")) as run:
+            cli.notify("hola")
+        self.assertEqual(run.call_args[0][0][0], "/usr/bin/osascript")
+
+    def test_a_failed_notification_is_logged_instead_of_lost(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(budget, "HOME", Path(tmp)), \
+                mock.patch.object(cli, "OSASCRIPT", "/nonexistent/osascript"):
+            cli.notify("hola")
+            [line] = (Path(tmp) / "notify-errors.log").read_text(encoding="utf-8").splitlines()
+        entry = json.loads(line)
+        self.assertEqual(entry["message"], "hola")
+        self.assertIn("nonexistent", entry["error"])
+
     def test_notify_test_sends_one_notification_and_says_how_to_allow_them(self):
         import contextlib, io
         sent, out = [], io.StringIO()

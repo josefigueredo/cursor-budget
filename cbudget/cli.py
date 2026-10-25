@@ -17,15 +17,28 @@ HOOKS = Path.home() / ".cursor" / "hooks.json"
 EVENTS = ("stop", "beforeSubmitPrompt")
 
 
+OSASCRIPT = "/usr/bin/osascript"  # by full path: Cursor runs hooks with its own PATH
+
+
 def notify(message: str) -> None:
-    """A macOS notification; a failure here must never reach Cursor."""
+    """A macOS notification; a failure here must never reach Cursor, but it is logged to notify-errors.log so a
+    missing notification can be explained."""
     if os.environ.get("CURSOR_BUDGET_NO_NOTIFY"):
         return
     script = f"display notification {json.dumps(message)} with title \"cursor-budget\""
     try:
-        subprocess.run(["osascript", "-e", script], capture_output=True, timeout=5)
-    except (OSError, subprocess.SubprocessError):
-        pass
+        done = subprocess.run([OSASCRIPT, "-e", script], capture_output=True, timeout=5)
+        error = f"exit {done.returncode}: {done.stderr.decode(errors='replace').strip()}" if done.returncode else ""
+    except (OSError, subprocess.SubprocessError) as exc:
+        error = f"{type(exc).__name__}: {exc}"
+    if error:
+        try:
+            budget.HOME.mkdir(parents=True, exist_ok=True)
+            with (budget.HOME / "notify-errors.log").open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"t": round(time.time()), "message": message, "error": error},
+                                    ensure_ascii=False) + "\n")
+        except OSError:
+            pass
 
 
 def hook(raw: str) -> dict:
