@@ -63,8 +63,9 @@ done
 echo "skill: cursor-budget (Cursor, Claude Code, Codex) -> $DEST"
 # Cursor's status bar: optional too, since an organization may allow only approved extensions
 # (CURSOR_BUDGET_NO_EXTENSION=1 skips it, for tests and captures)
-CURSOR_CLI="$(command -v cursor || true)"
-[ -n "$CURSOR_CLI" ] || CURSOR_CLI="/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
+# the app's own CLI first: a `cursor` on PATH can be a shim that re-execs itself when HOME is not the usual one
+CURSOR_CLI="/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
+[ -x "$CURSOR_CLI" ] || CURSOR_CLI="$(command -v cursor || true)"
 if [ -z "${CURSOR_BUDGET_NO_EXTENSION:-}" ] && [ -x "$CURSOR_CLI" ]; then
   if VSIX="$("$PY" "$REPO/vscode/build_vsix.py" "$DEST/vscode")" \
       && "$CURSOR_CLI" --install-extension "$VSIX" --force >/dev/null 2>&1; then
