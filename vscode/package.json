@@ -2,7 +2,7 @@
   "name": "cursor-budget",
   "displayName": "cursor-budget",
   "description": "Gasto estimado de Cursor en la barra de estado: hoy y el ciclo, contra tus límites de cursor-budget.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "",
   "license": "UNLICENSED",
   "engines": {"vscode": "^1.80.0"},
@@ -11,6 +11,6 @@
   "activationEvents": ["onStartupFinished"],
   "main": "./extension.js",
   "contributes": {
-    "commands": [{"command": "cursorBudget.report", "title": "cursor-budget: ver el reporte"}]
+    "commands": [{"command": "cursorBudget.open", "title": "cursor-budget: ver el gasto y los límites"}]
   }
 }

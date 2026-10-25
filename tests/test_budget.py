@@ -844,8 +844,107 @@ class TestDamagedFiles(Home):
         self.assertEqual(leftovers, [])
 
 
+class TestPanel(Home):
+    """The data behind the extension's panel: `cbudget panel` prints it as JSON."""
+
+    def data(self):
+        from cbudget import panel
+        return panel.data(home=self.home, now=lambda: NOON)
+
+    def test_detail_has_the_cycle_today_models_days_and_chats(self):
+        self.run_stop(stop(model="claude-opus-5-5-medium", conv="caro", input_tokens=1_000_000))
+        self.run_stop(stop(model="auto-smart", conv="barato", input_tokens=100_000))
+        d = self.data()
+        self.assertEqual(d["cycle"]["cap"], 150.0)
+        self.assertEqual(d["cycle"]["start"], "2026-10-01")
+        self.assertEqual(d["cycle"]["reset"], "2026-11-01")
+        self.assertEqual(d["cycle"]["days_left"], 8)
+        self.assertAlmostEqual(d["today"]["usd"], d["cycle"]["total"], places=4)
+        self.assertEqual((d["today"]["warn"], d["today"]["block"]), (8.0, 15.0))
+        self.assertEqual([m["model"] for m in d["models"]], ["claude-opus-5-5-medium", "auto-smart"])
+        self.assertEqual([x["date"] for x in d["days"]], ["2026-10-24"])
+        self.assertEqual([c["conversation_id"] for c in d["chats"]], ["caro", "barato"])
+        self.assertEqual(d["chats"][0]["turns"], 1)
+        json.dumps(d)  # the extension reads it as JSON
+
+    def test_limits_carry_value_kind_help_and_whether_they_were_changed(self):
+        budget.save_config({"block_day": 12.0}, home=self.home)
+        limits_ = {x["key"]: x for x in self.data()["limits"]}
+        self.assertEqual(set(limits_), set(budget.SCALARS))
+        self.assertEqual(limits_["block_day"], {"key": "block_day", "value": 12.0, "kind": "usd",
+                                                "help": budget.SCALARS["block_day"][1], "custom": True})
+        self.assertFalse(limits_["warn_day"]["custom"])
+
+    def test_budgets_blocks_extras_and_the_check_are_included(self):
+        budget.save_config({"model_budgets": {"claude-opus-*": 40.0}, "warn_day": 20.0}, home=self.home)
+        self.run_stop(stop(model="claude-opus-5-5-medium", input_tokens=1_000_000))
+        d = self.data()
+        self.assertEqual(d["budgets"][0]["pattern"], "claude-opus-*")
+        self.assertGreater(d["budgets"][0]["spent"], 0)
+        self.assertEqual(d["blocked_models"], budget.DEFAULTS["blocked_models"])
+        self.assertEqual([x["usd"] for x in d["extras"]], [75.0, 75.0])
+        self.assertEqual([x["granted"] for x in d["extras"]], [False, False])
+        self.assertTrue(any(p["level"] == "error" and "warn_day" in p["message"] for p in d["problems"]))
+
+    def test_the_cli_prints_the_panel_as_json(self):
+        import contextlib, io
+        from unittest import mock
+        out = io.StringIO()
+        with mock.patch.object(budget, "HOME", self.home), contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(["panel"]), 0)
+        self.assertIn("limits", json.loads(out.getvalue()))
+
+
 class TestCursorExtension(Home):
     """The status bar item of Cursor's app: a .vsix built with no dependencies, fed by `cbudget statusline --json`."""
+
+    def node(self, script, *args):
+        import shutil, subprocess
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not installed")
+        return subprocess.run([node, "-e", script, *args], capture_output=True, text=True, check=True).stdout
+
+    def panel_html(self, data, tab="detalle", error=""):
+        script = ("const p=require(process.argv[1]);"
+                  "process.stdout.write(p.html(JSON.parse(process.argv[2]),{nonce:'N0NCE',csp:'vscode-resource:',"
+                  "tab:process.argv[3],error:process.argv[4]}))")
+        return self.node(script, str(self.ROOT / "vscode" / "panel.js"), json.dumps(data), tab, error)
+
+    def sample(self):
+        from cbudget import panel
+        self.run_stop(stop(model="claude-opus-5-5-medium", conv="caro", input_tokens=1_000_000))
+        return panel.data(home=self.home, now=lambda: NOON)
+
+    def test_the_panel_shows_both_tabs_and_the_detail(self):
+        page = self.panel_html(self.sample())
+        for part in ('data-tab="detalle"', 'data-tab="limites"', "Uso del ciclo", "Por modelo", "Por día",
+                     "Chats más caros", "claude-opus-5-5-medium", "Se reinicia"):
+            self.assertIn(part, page)
+
+    def test_the_limits_tab_has_an_input_per_limit_and_the_blocked_models(self):
+        page = self.panel_html(self.sample(), tab="limites")
+        for key in budget.SCALARS:
+            self.assertIn(f'data-key="{key}"', page)
+        for pattern in budget.DEFAULTS["blocked_models"]:
+            self.assertIn(f'data-unblock="{pattern}"', page)
+        self.assertIn('id="block-new"', page)
+
+    def test_the_panel_escapes_text_and_only_runs_its_own_script(self):
+        data = self.sample()
+        data["models"][0]["model"] = '<img src=x onerror="alert(1)">'
+        page = self.panel_html(data, error='<script>alert(2)</script>')
+        self.assertNotIn("<img src=x", page)
+        self.assertNotIn("<script>alert(2)", page)
+        self.assertIn("&lt;img src=x", page)
+        self.assertIn("default-src 'none'", page)
+        self.assertIn("script-src 'nonce-N0NCE'", page)
+        import re
+        self.assertEqual(re.findall(r"<script(?: [^>]*)?>", page), ['<script nonce="N0NCE">'])
+
+    def test_the_panel_says_when_a_change_was_refused(self):
+        page = self.panel_html(self.sample(), tab="limites", error="block_day: esperaba un número, llegó 'doce'")
+        self.assertIn("esperaba un número", page)
     ROOT = Path(__file__).resolve().parent.parent
 
     def test_summary_has_the_numbers_the_status_bar_paints(self):
@@ -870,7 +969,7 @@ class TestCursorExtension(Home):
             names = set(z.namelist())
             manifest = z.read("extension.vsixmanifest").decode("utf-8")
         for name in ("[Content_Types].xml", "extension.vsixmanifest", "extension/package.json",
-                     "extension/extension.js", "extension/format.js"):
+                     "extension/extension.js", "extension/format.js", "extension/panel.js"):
             self.assertIn(name, names)
         self.assertIn(f'Version="{package["version"]}"', manifest)
         self.assertIn(f'Publisher="{package["publisher"]}"', manifest)

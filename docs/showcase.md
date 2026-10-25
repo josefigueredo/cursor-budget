@@ -149,7 +149,8 @@ registro.
 La app de Cursor no deja que un hook escriba en el chat, así que el gasto va en la barra de estado del editor (en
 Cursor 3, el botón **IDE ↗**; la ventana de Agentes no tiene barra de estado): lo de hoy contra
 `block_day` y lo del ciclo contra el tope con sus extras. Amarillo al pasar un aviso, rojo al llegar a un bloqueo. Un
-clic abre el reporte. En cursor-agent, el mismo gasto ocupa el pie, junto al modelo y al contexto:
+clic abre un panel con el detalle (ciclo, hoy, por modelo, por día, los chats más caros) y otra pestaña para cambiar
+los límites, que pasan por `cbudget limits` como desde el chat. En cursor-agent, el mismo gasto ocupa el pie, junto al modelo y al contexto:
 
 ![Pie de cursor-agent con el modelo, el contexto y el gasto de hoy y del ciclo](img/agent-pie.png)
 

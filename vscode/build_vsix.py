@@ -13,7 +13,7 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 
 HERE = Path(__file__).resolve().parent
-FILES = ("package.json", "extension.js", "format.js")
+FILES = ("package.json", "extension.js", "format.js", "panel.js")
 
 CONTENT_TYPES = """<?xml version="1.0" encoding="utf-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
