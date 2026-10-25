@@ -15,7 +15,7 @@ Después decile:
 
 El agente baja el instalador del repo y lo corre. Copia el programa a `~/.cursor/budget/app`, suma los dos hooks a
 `~/.cursor/hooks.json` sin tocar los que ya tenías, agrega el alias `cbudget` a tu `~/.zshrc` y deja la skill a mano de
-Cursor, Claude Code y Codex. También instala una extensión chica en Cursor para ver el gasto en la barra de estado, y
+Cursor, Claude Code y Codex. También instala una extensión chica en Cursor para ver el gasto en la barra de estado del editor, y
 pone el gasto en el pie de cursor-agent si lo usás (paso 5). Desde Cursor, el agente puede pedirte permiso para correrlo
 fuera del sandbox, porque escribe en tu carpeta personal: aceptalo.
 
@@ -69,7 +69,9 @@ Para el reporte completo, con el gasto por día y los últimos turnos, en una te
 
 No hace falta preguntar: el gasto está siempre a la vista.
 
-**En Cursor**, abajo a la derecha, en la barra de estado:
+**En el editor de Cursor**, abajo a la derecha, en la barra de estado. Cursor 3 abre la ventana de Agentes, que no
+tiene barra de estado: para ver el gasto ahí, tocá **IDE ↗** (arriba a la derecha) y se abre el editor. En la ventana
+de Agentes el gasto te llega igual en la notificación de cada turno, y se lo podés preguntar al agente (paso 4).
 
 ![Barra de estado de Cursor con el gasto de hoy y del ciclo, y cómo se pinta en amarillo y en rojo](img/cursor-barra.png)
 
@@ -144,7 +146,7 @@ la extensión nueva. Si instalaste antes de que existiera el aviso, actualizá u
 | El agente pide correr el comando fuera del sandbox | Es esperable: los límites viven en `~/.cursor/budget`. Aceptalo |
 | El total no coincide con Cursor | Volvé a cargar el monto de la página de uso (paso 3): el hook estima, Cursor cobra |
 | `cbudget: command not found` en la terminal | Abrí una terminal nueva: el alias se carga al abrirla |
-| No veo el gasto en la barra de estado de Cursor | Recargá la ventana: paleta de comandos (Cmd+Shift+P) → **Developer: Reload Window**. Cursor carga una extensión nueva recién al recargar |
+| No veo el gasto en la barra de estado de Cursor | Si estás en la ventana de Agentes (sin barra abajo), la barra está en el editor: tocá **IDE ↗**. Si ya estás en el editor, recargá la ventana: paleta de comandos (Cmd+Shift+P) → **Developer: Reload Window**. Cursor carga una extensión nueva recién al recargar |
 | La instalación dice que no pudo instalar la extensión | Tu organización puede permitir solo extensiones aprobadas. Pedí que la aprueben, o instalala vos: paleta de comandos → **Extensions: Install from VSIX…** y elegí el archivo que te nombra el instalador |
 | El pie de cursor-agent no muestra el gasto | Cerrá cursor-agent y abrilo de nuevo. Si sigue igual, *«Poné el gasto en el pie de cursor-agent»* |
 | La instalación dice «no lo toqué» | Tu `~/.cursor/hooks.json` no es JSON válido (te dice la línea): arreglalo o pedile al agente que lo revise, y volvé a instalar |

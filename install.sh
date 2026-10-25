@@ -68,7 +68,7 @@ CURSOR_CLI="$(command -v cursor || true)"
 if [ -z "${CURSOR_BUDGET_NO_EXTENSION:-}" ] && [ -x "$CURSOR_CLI" ]; then
   if VSIX="$("$PY" "$REPO/vscode/build_vsix.py" "$DEST/vscode")" \
       && "$CURSOR_CLI" --install-extension "$VSIX" --force >/dev/null 2>&1; then
-    echo "extensión de Cursor instalada: el gasto aparece en la barra de estado (si no, Developer: Reload Window)"
+    echo "extensión de Cursor instalada: el gasto aparece en la barra de estado del editor (IDE ↗; si no, Developer: Reload Window)"
   else
     echo "(no pude instalar la extensión de Cursor; podés hacerlo a mano con Extensions: Install from VSIX… y ${VSIX:-vscode/})"
   fi
