@@ -1,11 +1,21 @@
 import json
+import os
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
-from cbudget import budget, cli, limits, render
+# Days and cycles are local dates: the fixed clock below reads as a date in Buenos Aires, whatever the machine's zone.
+os.environ["TZ"] = "America/Argentina/Buenos_Aires"
+time.tzset()
+
+from cbudget import budget, cli, limits, render  # noqa: E402
 
 NOON = 1792850000.0  # 2026-10-24 10:53 -03, a fixed clock
+
+
+def at(date: str, hour: int = 12) -> float:
+    return time.mktime(time.strptime(f"{date} {hour}", "%Y-%m-%d %H"))
 
 
 def stop(model="claude-sonnet-5-5-high", conv="c1", **tokens):
@@ -80,6 +90,19 @@ class TestCycle(Home):
     def test_cycle_starts_on_the_configured_day(self):
         self.assertEqual(budget.cycle_start(NOON, 1), "2026-10-01")
         self.assertEqual(budget.cycle_start(NOON, 25), "2026-09-25")
+
+    def test_a_cycle_day_the_month_lacks_starts_on_its_last_day(self):
+        # Cursor bills a 31st cycle on Feb 28: that day belongs to the new cycle, not to both
+        for date, cycle_day, start in (("2027-02-28", 31, "2027-02-28"), ("2027-03-01", 31, "2027-02-28"),
+                                       ("2027-02-27", 31, "2027-01-31"), ("2027-03-31", 31, "2027-03-31"),
+                                       ("2027-03-30", 31, "2027-02-28"), ("2026-04-30", 31, "2026-04-30"),
+                                       ("2028-02-29", 30, "2028-02-29"), ("2028-02-28", 30, "2028-01-30"),
+                                       ("2027-02-28", 29, "2027-02-28")):
+            self.assertEqual(budget.cycle_start(at(date), cycle_day), start, f"{date} day {cycle_day}")
+
+    def test_the_cycle_start_agrees_with_the_report_next_cycle(self):
+        start = budget.cycle_start(at("2027-01-31"), 31)
+        self.assertEqual(render.next_cycle(start, 31).isoformat(), budget.cycle_start(at("2027-02-28"), 31))
 
     def test_seeded_cycle_adds_billed_and_later_estimates_only(self):
         old = dict(self.ROW, Date="2026-09-30T12:00:00.000Z")  # previous cycle: ignored
@@ -686,9 +709,10 @@ class TestStatusline(Home):
         self.assertNotIn("\n", text)
 
     def test_a_broken_state_still_prints_the_model_never_an_empty_line(self):
-        (self.home / "config.json").write_text("[]", encoding="utf-8")
-        self.assertEqual(self.line(), "Sonnet 5.5")
-        self.assertEqual(self.line(payload={}), "cursor-budget")
+        from unittest import mock
+        with mock.patch.object(budget, "read_ledger", side_effect=OSError("disk")):
+            self.assertEqual(self.line(), "Sonnet 5.5")
+            self.assertEqual(self.line(payload={}), "cursor-budget")
 
     def test_install_keeps_every_other_key_and_the_file_mode(self):
         from cbudget import statusline
@@ -735,6 +759,89 @@ class TestStatusline(Home):
         self.assertEqual(json.loads(path.read_text(encoding="utf-8")), {"version": 1})
         path.write_text(json.dumps({"statusLine": {"type": "command", "command": "mine"}}), encoding="utf-8")
         self.assertFalse(statusline.remove(path))
+
+
+# Each process waits for a "go" file, so they all reach the ledger at the same moment, like turns ending together.
+GO = "import os,sys,time\nwhile not os.path.exists(os.path.join(sys.argv[1],'go')): time.sleep(0.001)\n"
+
+
+class TestConcurrency(Home):
+    """Several Cursor windows and agents end turns at the same time; each hook is its own process."""
+    ROOT = Path(__file__).resolve().parent.parent
+
+    def test_turns_ending_together_still_warn_once_when_the_day_crosses_its_limit(self):
+        import subprocess, sys
+        (self.home / "config.json").write_text(json.dumps({"warn_day": 1.0, "block_day": 100.0,
+                                                           "notify_each_turn": False}), encoding="utf-8")
+        notes = self.home / "notes.txt"
+        script = (GO + "import json,sys,pathlib;from cbudget import budget;h=pathlib.Path(sys.argv[1]);n=h/'notes.txt';"
+                  "budget.on_stop({'hook_event_name':'stop','model':'claude-sonnet-5-5-high','conversation_id':"
+                  "sys.argv[2],'input_tokens':75000},home=h,now=lambda:float(sys.argv[3]),"
+                  "notify=lambda m:n.open('a').write(m+'\\n'))")
+        procs = [subprocess.Popen([sys.executable, "-c", script, str(self.home), f"c{i}", str(NOON)], cwd=self.ROOT)
+                 for i in range(8)]
+        (self.home / "go").touch()
+        for p in procs:
+            self.assertEqual(p.wait(timeout=30), 0)
+        self.assertEqual(len(budget.read_ledger(self.home)), 8)
+        text = notes.read_text(encoding="utf-8") if notes.exists() else ""
+        warnings = [ln for ln in text.splitlines() if "warn_day" in ln]
+        self.assertEqual(len(warnings), 1, warnings)
+
+    def test_two_extras_registered_together_both_count(self):
+        import subprocess, sys
+        script = (GO + "import sys,pathlib;from cbudget import budget;"
+                  "budget.grant_extra(home=pathlib.Path(sys.argv[1]),now=lambda:float(sys.argv[2]))")
+        procs = [subprocess.Popen([sys.executable, "-c", script, str(self.home), str(NOON)], cwd=self.ROOT)
+                 for _ in range(2)]
+        (self.home / "go").touch()
+        for p in procs:
+            p.wait(timeout=30)
+        self.assertEqual(budget.extras_granted(self.home, NOON, 1), [75.0, 75.0])
+
+
+class TestDamagedFiles(Home):
+    def test_an_unreadable_config_is_reported_and_never_overwritten(self):
+        path = self.home / "config.json"
+        path.write_text('{"block_day": 12, "blocked_models": [', encoding="utf-8")
+        problems = budget.check_limits(budget.config(self.home), [], None, home=self.home)
+        self.assertTrue(any(lvl == "error" and "config.json" in msg for lvl, msg in problems), problems)
+        with self.assertRaises(ValueError):
+            budget.save_config({"warn_day": 9.0}, home=self.home)
+        self.assertEqual(path.read_text(encoding="utf-8"), '{"block_day": 12, "blocked_models": [')
+
+    def test_a_value_of_the_wrong_type_falls_back_to_its_default_and_is_reported(self):
+        (self.home / "config.json").write_text(json.dumps({"block_day": "15", "warn_day": 3}), encoding="utf-8")
+        cfg = budget.config(self.home)
+        self.assertEqual((cfg["block_day"], cfg["warn_day"]), (15.0, 3))
+        problems = budget.check_limits(cfg, [], None, home=self.home)
+        self.assertTrue(any("block_day" in msg for _, msg in problems), problems)
+        self.assertEqual(self.run_submit({"model": "claude-sonnet-5-5-high", "conversation_id": "c"}), {})
+
+    def test_config_that_is_not_an_object_keeps_the_guard_working(self):
+        (self.home / "config.json").write_text("[]", encoding="utf-8")
+        self.assertEqual(budget.config(self.home)["block_day"], 15.0)
+        self.assertEqual(self.run_stop(stop(input_tokens=10)), {})
+
+    def test_ledger_lines_that_are_not_turns_are_skipped(self):
+        (self.home / "ledger.jsonl").write_text('5\n"x"\n{"t": 1}\n' + json.dumps(
+            {"t": NOON, "usd": 1.5, "conversation_id": "c"}) + "\n", encoding="utf-8")
+        self.assertEqual(len(budget.read_ledger(self.home)), 1)
+        self.assertEqual(self.run_stop(stop(input_tokens=10)), {})
+
+    def test_limits_that_are_not_finite_numbers_are_refused(self):
+        for raw in ("nan", "inf", "-inf"):
+            with self.assertRaises(ValueError):
+                budget.parse_value("block_day", raw)
+
+    def test_state_files_are_written_whole(self):
+        budget.save_config({"warn_day": 9.0}, home=self.home)
+        budget.grant_extra(home=self.home, now=lambda: NOON)
+        budget.allow(30, home=self.home, now=lambda: NOON)
+        budget.seed_amount(10.0, home=self.home, now=lambda: NOON)
+        leftovers = [p.name for p in self.home.iterdir() if p.name.startswith(".")
+                     and p.name != ".lock"]
+        self.assertEqual(leftovers, [])
 
 
 class TestCursorExtension(Home):

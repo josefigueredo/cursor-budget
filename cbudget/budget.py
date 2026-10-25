@@ -6,9 +6,13 @@ Cursor's `stop` payload carries model, input_tokens, output_tokens, cache_read_t
 """
 from __future__ import annotations
 
+import calendar
+import contextlib
 import datetime
+import fcntl
 import fnmatch
 import json
+import math
 import time
 from pathlib import Path
 from typing import Callable, Optional
@@ -71,8 +75,58 @@ def write_json_atomic(path: Path, data: dict) -> None:
         raise
 
 
+@contextlib.contextmanager
+def locked(home: Path):
+    """One process at a time on the shared state: turns that end together each see the others' entries, so a limit
+    crossed between them is warned once, and two changes at once never lose one."""
+    home.mkdir(parents=True, exist_ok=True)
+    with (home / ".lock").open("a") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+
+
+def _number(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) and v >= 0
+
+
+def _valid(key: str, value) -> bool:
+    """Whether a config.json value has the shape its default has; a wrong one falls back to the default."""
+    if key in ("blocked_models",):
+        return isinstance(value, list) and all(isinstance(p, str) for p in value)
+    if key in ("cycle_extras", "cycle_warn"):
+        return isinstance(value, list) and all(_number(v) for v in value) and (key != "cycle_warn" or bool(value))
+    if key == "model_budgets":
+        return isinstance(value, dict) and all(isinstance(k, str) and _number(v) for k, v in value.items())
+    kind = SCALARS.get(key, ("", ""))[0]
+    if kind == "bool":
+        return isinstance(value, bool)
+    if kind == "day":
+        return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 31
+    return _number(value) and (kind != "share" or value <= 1)
+
+
+def config_problems(home: Path = HOME) -> list:
+    """What is wrong with config.json itself, as error messages: unreadable, not an object, or a value of the wrong
+    type. The hooks keep running on the defaults meanwhile, so the person has to hear about it."""
+    path = home / "config.json"
+    if not path.exists():
+        return []
+    try:
+        data = read_json_strict(path)
+    except (OSError, ValueError) as exc:
+        return [f"config.json no se puede leer y rige la configuración por defecto: {exc}"]
+    return [f"config.json: {key} = {value!r} no es un valor válido; rige el por defecto ({DEFAULTS[key]!r})"
+            for key, value in data.items() if key in DEFAULTS and not _valid(key, value)]
+
+
 def config(home: Path = HOME) -> dict:
-    return {**DEFAULTS, **load_json(home / "config.json", {})}
+    data = load_json(home / "config.json", {})
+    if not isinstance(data, dict):
+        data = {}
+    return {**DEFAULTS, **{k: v for k, v in data.items() if k not in DEFAULTS or _valid(k, v)}}
 
 
 def prices(home: Path = HOME) -> dict:
@@ -113,9 +167,11 @@ def read_ledger(home: Path = HOME) -> list:
         return entries
     for line in lines:
         try:
-            entries.append(json.loads(line))
+            entry = json.loads(line)
         except ValueError:
             continue
+        if isinstance(entry, dict) and _number(entry.get("t")) and _number(entry.get("usd")):
+            entries.append(entry)
     return entries
 
 
@@ -126,10 +182,12 @@ def totals(entries: list, conversation: Optional[str], today: str) -> tuple:
 
 
 def cycle_start(t: float, cycle_day: int) -> str:
-    """The date the billing cycle containing t started: day `cycle_day` of this month or the previous one."""
+    """The date the billing cycle containing t started: day `cycle_day` of this month or the previous one. A month
+    without that day starts it on its last day (a 31st cycle starts on Feb 28), like render.next_cycle."""
     d = datetime.date.fromtimestamp(t)
-    if d.day >= cycle_day:
-        return d.replace(day=cycle_day).isoformat()
+    this = min(cycle_day, calendar.monthrange(d.year, d.month)[1])
+    if d.day >= this:
+        return d.replace(day=this).isoformat()
     prev = d.replace(day=1) - datetime.timedelta(days=1)
     return prev.replace(day=min(cycle_day, prev.day)).isoformat()
 
@@ -177,18 +235,18 @@ def grant_extra(home: Path = HOME, now: Callable[[], float] = time.time, actor: 
                 notify: Callable[[str], None] = lambda msg: None) -> dict:
     """Register the next extra of the plan for this cycle, once it was granted. Logged and notified like a limit."""
     t, cfg = now(), config(home)
-    granted, extras = extras_granted(home, t, cfg["cycle_day"]), cfg["cycle_extras"]
-    if len(granted) >= len(extras):
-        raise ValueError(f"ya se registraron los {len(extras)} extras de este ciclo: el tope es "
-                         f"${cycle_cap(cfg, home, t):.2f} hasta que se reinicie")
-    name, usd, before = extra_name(len(granted)), float(extras[len(granted)]), cycle_cap(cfg, home, t)
-    home.mkdir(parents=True, exist_ok=True)
-    (home / "extras.json").write_text(json.dumps({"cycle_start": cycle_start(t, cfg["cycle_day"]),
-                                                  "granted": granted + [usd]}), encoding="utf-8")
-    after = cycle_cap(cfg, home, t)
-    with (home / "changes.jsonl").open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps({"t": round(t), "actor": actor, "key": "cycle_extra", "before": before,
-                             "after": after}, ensure_ascii=False) + "\n")
+    with locked(home):
+        granted, extras = extras_granted(home, t, cfg["cycle_day"]), cfg["cycle_extras"]
+        if len(granted) >= len(extras):
+            raise ValueError(f"ya se registraron los {len(extras)} extras de este ciclo: el tope es "
+                             f"${cycle_cap(cfg, home, t):.2f} hasta que se reinicie")
+        name, usd, before = extra_name(len(granted)), float(extras[len(granted)]), cycle_cap(cfg, home, t)
+        write_json_atomic(home / "extras.json", {"cycle_start": cycle_start(t, cfg["cycle_day"]),
+                                                 "granted": granted + [usd]})
+        after = cycle_cap(cfg, home, t)
+        with (home / "changes.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"t": round(t), "actor": actor, "key": "cycle_extra", "before": before,
+                                 "after": after}, ensure_ascii=False) + "\n")
     notify(f"Cursor: {name} de ${usd:.0f} registrado ({actor}): el tope del ciclo pasa a ${after:.0f}.")
     return {"name": name, "usd": usd, "before": before, "after": after}
 
@@ -216,47 +274,54 @@ def crossed(before: float, after: float, limit: float) -> bool:
 
 def on_stop(payload: dict, home: Path = HOME, now: Callable[[], float] = time.time,
             notify: Callable[[str], None] = lambda msg: None) -> dict:
-    """Record the turn and warn once when a conversation or the day crosses its warn or block limit."""
+    """Record the turn and warn once when a conversation or the day crosses its warn or block limit. Reading the
+    ledger, appending the turn and deciding the warnings happen under the lock, so turns that end together each see
+    the others and a limit crossed between them is warned exactly once."""
     cfg, table, t = config(home), prices(home), now()
     usd = cost(payload, table)
-    entries = read_ledger(home)
-    conv_id = payload.get("conversation_id")
-    conv_before, day_before = totals(entries, conv_id, day(t))
-    entry = {"t": round(t), "conversation_id": conv_id, "model": payload.get("model"), "usd": usd,
-             **{k: payload.get(k) for k in ("input_tokens", "output_tokens", "cache_read_tokens",
-                                             "cache_write_tokens")}}
-    home.mkdir(parents=True, exist_ok=True)
-    with (home / "ledger.jsonl").open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(entry) + "\n")
-    conv_after, day_after = round(conv_before + usd, 4), round(day_before + usd, 4)
-    cycle_after, seeded = cycle_total(entries + [entry], home, t, cfg["cycle_day"])
-    cycle_before, limit = round(cycle_after - usd, 4), cycle_cap(cfg, home, t)
-    since = "" if seeded else " desde que se instaló; cargá lo gastado con `cbudget seed --amount <usd>`"
-    for share in sorted(cfg["cycle_warn"], reverse=True):
-        if crossed(cycle_before, cycle_after, limit * share):
-            hint = extra_hint(cfg, home, t) if share >= 1 else ""
-            notify(f"Cursor: el ciclo ya va ~${cycle_after:.2f} de ${limit:.0f} ({cycle_after / limit:.0%}){since}.{hint}")
-            break
-    else:
-        if cfg["notify_each_turn"]:
-            notify(f"turno ~${usd:.2f} · chat ~${conv_after:.2f} · ciclo ~${cycle_after:.2f} de ${limit:.0f}{since}")
-    pattern = budget_for(payload.get("model") or "", cfg["model_budgets"])
-    if pattern:
-        cap = float(cfg["model_budgets"][pattern])
-        spent = model_spend(entries + [entry], home, t, cfg["cycle_day"], pattern)
-        for share in (1.0, cfg["model_warn"]):
-            if crossed(spent - usd, spent, cap * share):
-                notify(f"Cursor: {pattern} ya usó ~${spent:.2f} de sus ${cap:.0f} del ciclo ({spent / cap:.0%}).")
+    said = []
+    say = said.append
+    with locked(home):
+        entries = read_ledger(home)
+        conv_id = payload.get("conversation_id")
+        conv_before, day_before = totals(entries, conv_id, day(t))
+        entry = {"t": round(t), "conversation_id": conv_id, "model": payload.get("model"), "usd": usd,
+                 **{k: payload.get(k) for k in ("input_tokens", "output_tokens", "cache_read_tokens",
+                                                 "cache_write_tokens")}}
+        home.mkdir(parents=True, exist_ok=True)
+        with (home / "ledger.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry) + "\n")
+        conv_after, day_after = round(conv_before + usd, 4), round(day_before + usd, 4)
+        cycle_after, seeded = cycle_total(entries + [entry], home, t, cfg["cycle_day"])
+        cycle_before, limit = round(cycle_after - usd, 4), cycle_cap(cfg, home, t)
+        since = "" if seeded else " desde que se instaló; cargá lo gastado con `cbudget seed --amount <usd>`"
+        for share in sorted(cfg["cycle_warn"], reverse=True):
+            if crossed(cycle_before, cycle_after, limit * share):
+                hint = extra_hint(cfg, home, t) if share >= 1 else ""
+                say(f"Cursor: el ciclo ya va ~${cycle_after:.2f} de ${limit:.0f} ({cycle_after / limit:.0%}){since}.{hint}")
                 break
-    for limit_key, before, after, what in (
-            ("block_conversation", conv_before, conv_after, "este chat"),
-            ("warn_conversation", conv_before, conv_after, "este chat"),
-            ("block_day", day_before, day_after, "hoy"),
-            ("warn_day", day_before, day_after, "hoy")):
-        if crossed(before, after, cfg[limit_key]):
-            tail = " Abrí un chat nuevo." if what == "este chat" else ""
-            notify(f"Cursor: {what} ya va ~${after:.2f} (límite {limit_key} ${cfg[limit_key]:.0f}).{tail}")
-            break
+        else:
+            if cfg["notify_each_turn"]:
+                say(f"turno ~${usd:.2f} · chat ~${conv_after:.2f} · ciclo ~${cycle_after:.2f} de ${limit:.0f}{since}")
+        pattern = budget_for(payload.get("model") or "", cfg["model_budgets"])
+        if pattern:
+            cap = float(cfg["model_budgets"][pattern])
+            spent = model_spend(entries + [entry], home, t, cfg["cycle_day"], pattern)
+            for share in (1.0, cfg["model_warn"]):
+                if crossed(spent - usd, spent, cap * share):
+                    say(f"Cursor: {pattern} ya usó ~${spent:.2f} de sus ${cap:.0f} del ciclo ({spent / cap:.0%}).")
+                    break
+        for limit_key, before, after, what in (
+                ("block_conversation", conv_before, conv_after, "este chat"),
+                ("warn_conversation", conv_before, conv_after, "este chat"),
+                ("block_day", day_before, day_after, "hoy"),
+                ("warn_day", day_before, day_after, "hoy")):
+            if crossed(before, after, cfg[limit_key]):
+                tail = " Abrí un chat nuevo." if what == "este chat" else ""
+                say(f"Cursor: {what} ya va ~${after:.2f} (límite {limit_key} ${cfg[limit_key]:.0f}).{tail}")
+                break
+    for message in said:  # outside the lock: a slow notification must not hold up other turns
+        notify(message)
     return {}
 
 
@@ -308,7 +373,7 @@ def on_submit(payload: dict, home: Path = HOME, now: Callable[[], float] = time.
 def allow(minutes: int, home: Path = HOME, now: Callable[[], float] = time.time) -> float:
     until = now() + minutes * 60
     home.mkdir(parents=True, exist_ok=True)
-    (home / "allow.json").write_text(json.dumps({"until": until}), encoding="utf-8")
+    write_json_atomic(home / "allow.json", {"until": until})
     return until
 
 
@@ -358,7 +423,7 @@ def seed(rows, home: Path = HOME, now: Callable[[], float] = time.time, cycle_da
         until = max(until, stamp)
     base = {"cycle_start": start, "billed": round(billed, 2), "until": until, "by_model": by_model, "by_day": by_day}
     home.mkdir(parents=True, exist_ok=True)
-    (home / "baseline.json").write_text(json.dumps(base), encoding="utf-8")
+    write_json_atomic(home / "baseline.json", base)
     return base
 
 
@@ -370,7 +435,7 @@ def seed_amount(usd: float, home: Path = HOME, now: Callable[[], float] = time.t
     base = {"cycle_start": cycle_start(t, cycle_day or config(home)["cycle_day"]), "billed": round(usd, 2),
             "until": t, "by_model": {}, "by_day": {}, "source": "amount"}
     home.mkdir(parents=True, exist_ok=True)
-    (home / "baseline.json").write_text(json.dumps(base), encoding="utf-8")
+    write_json_atomic(home / "baseline.json", base)
     return base
 
 
@@ -415,6 +480,8 @@ def parse_value(key: str, raw: str):
         value = int(text) if kind == "day" else float(text.rstrip("%")) / (100 if text.endswith("%") else 1)
     except ValueError:
         raise ValueError(f"{key}: esperaba {'un día' if kind == 'day' else 'un número'}, llegó {raw!r}") from None
+    if not math.isfinite(value):
+        raise ValueError(f"{key}: esperaba un número, llegó {raw!r}")
     if kind == "day":
         if not 1 <= value <= 31:
             raise ValueError(f"{key}: el día va de 1 a 31")
@@ -432,27 +499,30 @@ def save_config(changes: dict, home: Path = HOME, now: Callable[[], float] = tim
                 notify: Callable[[str], None] = lambda msg: None) -> dict:
     """Merge `changes` into config.json, log each change to changes.jsonl and notify: an agent can raise its own
     budget, so every change must be visible to the person."""
-    current = user_config(home)
-    merged = {**current, **changes}
-    if merged == current:
-        return merged
-    home.mkdir(parents=True, exist_ok=True)
-    (home / "config.json").write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    effective_before = {**DEFAULTS, **current}
-    with (home / "changes.jsonl").open("a", encoding="utf-8") as fh:
-        for key, value in changes.items():
-            if effective_before.get(key) != value:
-                fh.write(json.dumps({"t": round(now()), "actor": actor, "key": key,
-                                     "before": effective_before.get(key), "after": value}, ensure_ascii=False) + "\n")
+    with locked(home):
+        path = home / "config.json"
+        # merging into a file that cannot be read would replace every other customization with defaults
+        current = read_json_strict(path) if path.exists() else {}
+        merged = {**current, **changes}
+        if merged == current:
+            return merged
+        write_json_atomic(path, merged)
+        effective_before = {**DEFAULTS, **current}
+        with (home / "changes.jsonl").open("a", encoding="utf-8") as fh:
+            for key, value in changes.items():
+                if effective_before.get(key) != value:
+                    fh.write(json.dumps({"t": round(now()), "actor": actor, "key": key, "before": effective_before.get(key),
+                                         "after": value}, ensure_ascii=False) + "\n")
     notify(f"Límites de Cursor cambiados ({actor}): {', '.join(sorted(changes))}")
     return merged
 
 
-def check_limits(cfg: dict, known_models: list, cap: Optional[float] = None) -> list:
+def check_limits(cfg: dict, known_models: list, cap: Optional[float] = None, home: Optional[Path] = None) -> list:
     """Problems in the effective config, as (level, message), level in error|warning. `cap` is the cycle cap with
-    the extras granted (cycle_cap); without it, the plan's cycle_limit."""
+    the extras granted (cycle_cap); without it, the plan's cycle_limit. With `home`, also config.json's own problems
+    (unreadable, or a value of the wrong type), which the defaults hide."""
     cap = float(cfg["cycle_limit"]) if cap is None else cap
-    problems = []
+    problems = [("error", msg) for msg in config_problems(home)] if home is not None else []
     unknown = sorted(set(cfg) - set(DEFAULTS))
     if unknown:
         problems.append(("warning", f"Claves desconocidas en config.json, se ignoran: {', '.join(unknown)}"))
