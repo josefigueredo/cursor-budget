@@ -85,6 +85,12 @@ de Agentes el gasto te llega igual en la notificación de cada turno, y se lo po
   caros) y **Límites**, donde cambiás cada límite, bloqueás o desbloqueás modelos y ponés presupuestos por modelo.
   Cada cambio queda registrado y te llega la notificación, igual que si se lo pedís al agente.
 
+![Panel de cursor-budget, pestaña Detalle: el ciclo, hoy, por modelo, por día y los chats más caros](img/cursor-panel-detalle.png)
+
+![Panel de cursor-budget, pestaña Límites: cada límite con Guardar, los modelos bloqueados, presupuestos y extras](img/cursor-panel-limites.png)
+
+*Maquetas: la ventana es aproximada; el panel es el que dibuja la extensión, con los datos del ciclo de ejemplo.*
+
 **En cursor-agent** (Cursor en la terminal), el pie muestra el modelo, cuánto del contexto usaste y el mismo gasto:
 
 ![Pie de cursor-agent con el modelo, el contexto y el gasto de hoy y del ciclo](img/agent-pie.png)
@@ -160,6 +166,7 @@ la extensión nueva. Si instalaste antes de que existiera el aviso, actualizá u
 | `cursor-gasto.png`, `cursor-tope.png` | **Maqueta** reconstruida de chats reales de Cursor del 2026-10-24; en `cursor-gasto` se cambiaron los montos por los del ciclo de ejemplo y se acortaron los próximos pasos |
 | `cursor-bloqueo.png` | **Maqueta**: el título y el mensaje son los que mostró el IDE de Cursor el 2026-10-24; el resto de la pantalla es aproximado |
 | `cursor-barra.png` | **Maqueta**: la ventana es aproximada; el texto y los colores son los de la extensión (`vscode/format.js`) |
+| `cursor-panel-detalle.png`, `cursor-panel-limites.png` | **Maqueta**: la ventana imita el editor de Cursor 3.22; el panel lo dibuja `vscode/panel.js` con los datos inventados del episodio. Son las mismas páginas del episodio 09 |
 | `agent-pie.png` | **Maqueta** del pie que mostró cursor-agent 2026.10.22 en un turno real del 2026-10-25, con otros montos |
 | `terminal-report.png` (en el README) | **Salida real** del `cbudget` actual, con un ciclo de datos inventados |
 
