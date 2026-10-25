@@ -44,6 +44,7 @@ presupuesto de cada modelo y el gasto por día. El recorrido completo está en e
 | **Instalarlo y usarlo, conversando con tu agente** | [Instalación y primer uso](docs/instalacion.md) | Todo con prompts: instalar, comprobar las notificaciones, cargar lo gastado, preguntar, cambiar límites y qué hacer cuando te frena |
 | **Instalarlo comando por comando** | [Instalación detallada](docs/instalacion-detallada.md) | Requisitos, las formas de instalar, qué deja instalado, los comandos de uso y cómo desinstalar, con capturas de la terminal |
 | **Ver todo lo que hace** | [Showcase](docs/showcase.md) | Cada caso: qué le decís al agente, qué corre, qué ves y qué pasa si algo falla |
+| **Verla en el taller de skills** | [Episodio del taller](https://probable-dollop-lk5vvym.pages.github.io/) | El episodio que se dio en el taller de team, publicado en GitHub Pages (sitio privado: entrás con tu cuenta de la organización). El guion vive en [`workshop/`](workshop/) |
 | **Consultar los detalles** | [Referencia](docs/referencia.md) | Cada comando, los límites por defecto, los archivos, cómo estima el costo, lo medido y los códigos de salida |
 
 ## En tres comandos
