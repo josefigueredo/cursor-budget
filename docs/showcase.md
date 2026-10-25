@@ -146,7 +146,8 @@ registro.
 
 *Maqueta: la ventana es aproximada; el texto y los colores son los de la extensión.*
 
-La app de Cursor no deja que un hook escriba en el chat, así que el gasto va en la barra de estado: lo de hoy contra
+La app de Cursor no deja que un hook escriba en el chat, así que el gasto va en la barra de estado del editor (en
+Cursor 3, el botón **IDE ↗**; la ventana de Agentes no tiene barra de estado): lo de hoy contra
 `block_day` y lo del ciclo contra el tope con sus extras. Amarillo al pasar un aviso, rojo al llegar a un bloqueo. Un
 clic abre el reporte. En cursor-agent, el mismo gasto ocupa el pie, junto al modelo y al contexto:
 
@@ -158,6 +159,7 @@ clic abre el reporte. En cursor-agent, el mismo gasto ocupa el pie, junto al mod
 
 | Situación | Resultado |
 |---|---|
+| Trabajás en la ventana de Agentes de Cursor 3 | No hay barra de estado ahí: el gasto se ve en el editor (**IDE ↗**), en la notificación de cada turno o preguntándole al agente |
 | La extensión recién instalada no aparece | Cursor la carga al recargar la ventana (**Developer: Reload Window**) |
 | La organización solo permite extensiones aprobadas | La instalación sigue; la extensión se instala a mano desde el `.vsix` o cuando la aprueben |
 | Faltan las Command Line Tools | La barra dice «cursor-budget sin instalar» y no abre el diálogo de macOS en cada consulta |

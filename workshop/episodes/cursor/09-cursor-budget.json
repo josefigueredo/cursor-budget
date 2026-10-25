@@ -157,6 +157,10 @@
         {
           "q": "¿Puede el agente subirse el presupuesto?",
           "a": "La skill tiene prohibido cambiar algo que no pediste. Igual, cada cambio te llega como notificación y queda anotado con quién lo hizo."
+        },
+        {
+          "q": "¿Por qué no veo la barra con el gasto?",
+          "a": "Porque estás en la ventana de Agentes de Cursor 3, que no tiene barra de estado. Tocá IDE, arriba a la derecha: en el editor está abajo a la derecha. Si recién instalaste, recargá la ventana."
         }
       ],
       "steps": [
@@ -280,16 +284,16 @@
         },
         {
           "type": "page",
-          "title": "Cursor — barra de estado",
+          "title": "Cursor (editor) — barra de estado",
           "src": "pages/cursor-budget-barra.html",
           "source": "inferido",
           "callouts": [
             {
               "kind": "note",
-              "text": "**Siempre a la vista.** Abajo a la derecha: lo de hoy y lo del ciclo. Amarillo cerca de un aviso, rojo en un bloqueo."
+              "text": "**En el editor de Cursor.** Abajo a la derecha: lo de hoy y lo del ciclo. Amarillo cerca de un aviso, rojo en un bloqueo."
             }
           ],
-          "notes": "Esto lo instala cursor-budget solo: una extensión chica en la barra de estado de Cursor. Muestra lo que gastaste hoy contra el tope diario, y lo del ciclo contra el tope del plan. Se pone amarilla cuando pasás un aviso y roja cuando llegás a un bloqueo. Un clic abre el reporte. Si recién lo instalaste y no la ves, recargá la ventana."
+          "notes": "Esto lo instala cursor-budget solo: una extensión chica en la barra de estado del editor de Cursor. Ojo: Cursor 3 abre la ventana de Agentes, que no tiene barra de estado; el botón IDE, arriba a la derecha, abre el editor y ahí está. Muestra lo que gastaste hoy contra el tope diario, y lo del ciclo contra el tope del plan. Se pone amarilla cuando pasás un aviso y roja cuando llegás a un bloqueo. Un clic abre el reporte. En la ventana de Agentes, el gasto te llega en la notificación de cada turno."
         },
         {
           "type": "ask",
