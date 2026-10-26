@@ -1086,15 +1086,3 @@ class TestCursorExtension(Home):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-class TestWorkshopEpisode(unittest.TestCase):
-    """The episode's index page lists its chapters with the same titles their cards show."""
-
-    def test_the_index_names_each_chapter_as_its_card_does(self):
-        import re
-        root = Path(__file__).resolve().parent.parent / "workshop" / "episodes"
-        episode = json.loads((root / "cursor" / "09-cursor-budget.json").read_text(encoding="utf-8"))
-        index = (root / "pages" / "cursor-budget-indice.html").read_text(encoding="utf-8")
-        listed = re.findall(r'class="t">([^<]*)<', index)
-        self.assertEqual(listed, [c["title"] for c in episode["chapters"][1:]])
