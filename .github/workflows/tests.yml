@@ -1,0 +1,52 @@
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: python ${{ matrix.python-version }}
+    # setup-python has no 3.9 for Ubuntu 26.04 (ubuntu-latest since October 2026): 3.9 stays on 24.04, because it is
+    # the /usr/bin/python3 of macOS that the hooks run with
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.9"
+            os: ubuntu-24.04
+          - python-version: "3.12"
+            os: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      # the extension's panel tests run its JS with node; without it they would be skipped
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+  macos:
+    # the hooks run with macOS's own /usr/bin/python3, and the notifications go through osascript: test with those
+    name: macOS /usr/bin/python3
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run tests
+        run: /usr/bin/python3 -m unittest discover -s tests -v
