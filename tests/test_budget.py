@@ -380,7 +380,7 @@ class TestReport(Home):
         (self.home / "config.json").write_text(json.dumps({"model_budgets": {"claude-*": 10}}), encoding="utf-8")
         self.run_stop(stop(input_tokens=1_000_000))
         text = render.report(7, home=self.home, color=False, now=NOON)
-        for heading in ("Uso de Cursor", "Uso del ciclo", "Presupuesto por modelo", "Uso por día", "Últimos turnos"):
+        for heading in ("Uso de Cursor", "Uso del ciclo", "Presupuestos por modelo", "Gastos por día", "Últimos turnos"):
             self.assertIn(heading, text)
         self.assertNotIn("\033[", text)
         self.assertIn("Quedan 8 días", text)
@@ -468,7 +468,7 @@ class TestLimits(Home):
 
     def test_show_lists_limits_and_the_check(self):
         text = limits.show(home=self.home, color=False, now=NOON)
-        for heading in ("Límites de cursor-budget", "Generales", "Presupuesto por modelo", "Chequeo"):
+        for heading in ("Límites de cursor-budget", "Generales", "Presupuestos por modelo (ciclo)", "Chequeo"):
             self.assertIn(heading, text)
 
 

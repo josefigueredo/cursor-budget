@@ -58,7 +58,7 @@ def show(home: Path = budget.HOME, color: bool = False, now: Optional[float] = N
                         + line_bar(used, bar_w, paint, level(used)) + paint(f"{used:5.0%}", level(used), bold=True))
     else:
         rows = [paint("Sin presupuestos por modelo. Agregá uno con `cbudget limits model <patrón> <usd>`.", MUTED)]
-    out += card("Presupuesto por modelo (ciclo)", rows, size, paint)
+    out += card("Presupuestos por modelo (ciclo)", rows, size, paint)
 
     blocked = cfg["blocked_models"]
     out += card("Modelos bloqueados", [paint(", ".join(blocked) if blocked else "Ninguno", TEXT)], size, paint)
@@ -126,7 +126,7 @@ def edit(home: Path = budget.HOME, ask: Callable[[str], str] = input, say: Calla
             break
 
     budgets = dict(cfg["model_budgets"])
-    say("\nPresupuesto por modelo: un monto lo cambia, '-' lo quita.")
+    say("\nPresupuestos por modelo: un monto lo cambia, '-' lo quita.")
     for pattern in list(budgets):
         raw = ask(f"  {pattern} [{money(float(budgets[pattern]))}]: ").strip()
         if raw == "-":
