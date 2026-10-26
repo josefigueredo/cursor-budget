@@ -645,7 +645,12 @@ class TestCli(unittest.TestCase):
     def test_the_alias_goes_to_the_file_the_login_shell_reads(self):
         home = Path.home()
         self.assertEqual(cli.rc_file("/bin/zsh", "Darwin"), home / ".zshrc")
-        self.assertEqual(cli.rc_file(None, "Darwin"), home / ".zshrc")  # no $SHELL: zsh, macOS's default
+        from unittest import mock
+        env = {k: v for k, v in os.environ.items() if k != "SHELL"}
+        with mock.patch.dict("os.environ", env, clear=True):  # no $SHELL: zsh, macOS's default
+            self.assertEqual(cli.rc_file(None, "Darwin"), home / ".zshrc")
+        with mock.patch.dict("os.environ", {"SHELL": "/bin/bash"}):  # None reads $SHELL
+            self.assertEqual(cli.rc_file(None, "Linux"), home / ".bashrc")
         # Terminal on macOS opens login shells, and a login bash reads ~/.bash_profile, not ~/.bashrc
         self.assertEqual(cli.rc_file("/bin/bash", "Darwin"), home / ".bash_profile")
         self.assertEqual(cli.rc_file("/usr/bin/bash", "Linux"), home / ".bashrc")
