@@ -13,7 +13,7 @@
   },
   "skill": {
     "repo": "cursor-budget",
-    "commit": "5e4413b",
+    "commit": "8fad454",
     "date": "2026-10-25"
   },
   "workspace": {
@@ -82,7 +82,7 @@
           "cmd": "gh api repos/josefigueredo/cursor-budget/contents/bootstrap.sh -H \"Accept: application/vnd.github.raw\" | bash",
           "out": [
             "",
-            "cursor-budget 5e4413b · instalación nueva",
+            "cursor-budget 8fad454 · instalación nueva",
             "",
             "  ✓ Programa         en ~/.cursor/budget/app",
             "  ✓ Hooks            stop y beforeSubmitPrompt sumados a ~/.cursor/hooks.json, sin tocar los demás",
@@ -136,7 +136,7 @@
           "cmd": "bash ~/skills/cursor-budget/install.sh",
           "out": [
             "",
-            "cursor-budget 5e4413b · instalación nueva",
+            "cursor-budget 8fad454 · instalación nueva",
             "",
             "  ✓ Programa         en ~/.cursor/budget/app",
             "  ✓ Hooks            stop y beforeSubmitPrompt sumados a ~/.cursor/hooks.json, sin tocar los demás",
@@ -537,7 +537,7 @@
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[1;38;2;236;236;236m$84.86\u001b[0m                          \u001b[38;2;58;58;58m│\u001b[0m  \u001b[38;2;58;58;58m│\u001b[0m \u001b[1;38;2;22;160;92m$65.14\u001b[0m                          \u001b[38;2;58;58;58m│\u001b[0m  \u001b[38;2;58;58;58m│\u001b[0m \u001b[1;38;2;236;236;236m$0.56\u001b[0m                            \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m╰─────────────────────────────────╯\u001b[0m  \u001b[38;2;58;58;58m╰─────────────────────────────────╯\u001b[0m  \u001b[38;2;58;58;58m╰──────────────────────────────────╯\u001b[0m",
             "\u001b[38;2;58;58;58m╭────────────────────────────────────────────────────────────────────────────────────────────────────────────╮\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mUso por día\u001b[0m                                                                                                \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mGastos por día\u001b[0m                                                                                             \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mTu uso por día en este ciclo\u001b[0m                                                                               \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m                                                                                                            \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140m01 oct  \u001b[0m\u001b[38;2;62;152;255m███████████████████████████████████████████████████████████████████████████████████████\u001b[0m\u001b[38;2;236;236;236m      $9.10\u001b[0m \u001b[38;2;58;58;58m│\u001b[0m",
@@ -566,9 +566,9 @@
             "\u001b[38;2;58;58;58m╭────────────────────────────────────────────────────────────────────────────────────────────────────────────╮\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mÚltimos turnos (último día)\u001b[0m                                                                                \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mFecha            Modelo                    Chat         Tokens     Costo\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 22:41  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   186.0K\u001b[0m\u001b[38;2;236;236;236m     $0.18\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 22:41  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   268.0K\u001b[0m\u001b[38;2;236;236;236m     $0.23\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 22:41  \u001b[0m\u001b[38;2;246;196;120m● \u001b[0m\u001b[38;2;236;236;236mauto-smart\u001b[0m                \u001b[38;2;140;140;140mb2        \u001b[0m\u001b[38;2;236;236;236m   124.0K\u001b[0m\u001b[38;2;236;236;236m     $0.15\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 22:42  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   186.0K\u001b[0m\u001b[38;2;236;236;236m     $0.18\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 22:42  \u001b[0m\u001b[38;2;62;152;255m● \u001b[0m\u001b[38;2;236;236;236mclaude-sonnet-5-5-high\u001b[0m    \u001b[38;2;140;140;140ma1        \u001b[0m\u001b[38;2;236;236;236m   268.0K\u001b[0m\u001b[38;2;236;236;236m     $0.23\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;236;236;236m25 oct, 22:42  \u001b[0m\u001b[38;2;246;196;120m● \u001b[0m\u001b[38;2;236;236;236mauto-smart\u001b[0m                \u001b[38;2;140;140;140mb2        \u001b[0m\u001b[38;2;236;236;236m   124.0K\u001b[0m\u001b[38;2;236;236;236m     $0.15\u001b[0m                                   \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
             ""
           ],
@@ -615,7 +615,7 @@
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mTope del ciclo: $150.00. Se registran cuando te los otorgan y terminan con el ciclo.\u001b[0m             \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m╰──────────────────────────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
             "\u001b[38;2;58;58;58m╭──────────────────────────────────────────────────────────────────────────────────────────────────╮\u001b[0m",
-            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mPresupuesto por modelo (ciclo)\u001b[0m                                                                   \u001b[38;2;58;58;58m│\u001b[0m",
+            "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mPresupuestos por modelo (ciclo)\u001b[0m                                                                  \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m│\u001b[0m \u001b[38;2;140;140;140mSin presupuestos por modelo. Agregá uno con `cbudget limits model <patrón> <usd>`.\u001b[0m               \u001b[38;2;58;58;58m│\u001b[0m",
             "\u001b[38;2;58;58;58m╰──────────────────────────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
             "\u001b[38;2;58;58;58m╭──────────────────────────────────────────────────────────────────────────────────────────────────╮\u001b[0m",
@@ -679,9 +679,10 @@
           "type": "term",
           "cmd": "python3 ~/.cursor/budget/app/cbudget.py version",
           "out": [
-            "instalado: 5e4413b"
+            "instalado: 8fad454",
+            "al día con GitHub"
           ],
-          "source": "real",
+          "source": "inferido",
           "cwd": "~",
           "notes": "cursor-budget sabe qué versión tenés. Una vez por día se fija si hay una nueva y, si la hay, te manda una notificación una sola vez. Para actualizar le decís al agente: actualizá cursor-budget.",
           "callouts": [
@@ -696,7 +697,7 @@
           "cmd": "python3 ~/.cursor/budget/app/cbudget.py update",
           "out": [
             "",
-            "cursor-budget 5e4413b · actualización de 9f253b4 a 5e4413b",
+            "cursor-budget 8fad454 · actualización de 9f253b4 a 8fad454",
             "",
             "  ✓ Programa         en ~/.cursor/budget/app (tus límites, registro y seed quedan como estaban)",
             "  ✓ Hooks            stop y beforeSubmitPrompt, ya estaban en ~/.cursor/hooks.json",
@@ -721,7 +722,7 @@
             },
             {
               "kind": "box",
-              "match": "actualización de 9f253b4 a 5e4413b",
+              "match": "actualización de 9f253b4 a 8fad454",
               "text": "de qué versión a cuál"
             },
             {
@@ -735,7 +736,7 @@
           "type": "term",
           "cmd": "python3 ~/.cursor/budget/app/cbudget.py allow --minutes 30",
           "out": [
-            "bloqueos levantados hasta las 23:11"
+            "bloqueos levantados hasta las 23:12"
           ],
           "source": "real",
           "cwd": "~",
@@ -800,7 +801,7 @@
           "type": "term",
           "cmd": "tail -n 1 ~/.cursor/budget/blocks.jsonl",
           "out": [
-            "{\"t\": 1792978886, \"conversation_id\": \"c1\", \"model\": \"claude-opus-5-5-high\", \"reason\": \"el modelo claude-opus-5-5-high está bloqueado; elegí otro o corré `cbudget allow`\"}"
+            "{\"t\": 1792978938, \"conversation_id\": \"c1\", \"model\": \"claude-opus-5-5-high\", \"reason\": \"el modelo claude-opus-5-5-high está bloqueado; elegí otro o corré `cbudget allow`\"}"
           ],
           "source": "real",
           "cwd": "~",
@@ -810,7 +811,7 @@
           "type": "term",
           "cmd": "python3 ~/.cursor/budget/app/cbudget.py allow --minutes 30",
           "out": [
-            "bloqueos levantados hasta las 23:11"
+            "bloqueos levantados hasta las 23:12"
           ],
           "source": "real",
           "cwd": "~",
