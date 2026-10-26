@@ -342,17 +342,16 @@
           "capture_only": true
         },
         {
-          "type": "page",
-          "title": "Cursor — ventana de Agentes",
-          "src": "pages/cursor-budget-agentes.html",
+          "type": "click",
+          "target": "ide",
           "source": "inferido",
           "callouts": [
             {
               "kind": "note",
-              "text": "**Paso 1.** La ventana de Agentes no tiene barra de estado. Tocá **IDE ↗**, arriba a la derecha."
+              "text": "**Paso 1.** Esta es la ventana de Agentes, y no tiene barra de estado. Tocá **IDE ↗**, arriba de la conversación, para abrir el editor."
             }
           ],
-          "notes": "Cursor 3 abre la ventana de Agentes, que no tiene barra de estado. El gasto a la vista está en el editor: el botón IDE, arriba a la derecha, lo abre. Maqueta con los datos del ejemplo."
+          "notes": "Cursor 3 abre la ventana de Agentes, que no tiene barra de estado. El gasto a la vista está en el editor: el botón IDE, arriba de la conversación, lo abre."
         },
         {
           "type": "page",
