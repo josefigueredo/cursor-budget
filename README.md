@@ -56,7 +56,7 @@ cbudget seed ~/Downloads/team-usage-events*.csv   # en una terminal nueva, una v
 cbudget report
 ```
 
-Requisitos: macOS, Cursor, el `python3` de macOS (`/usr/bin/python3`, viene con las Command Line Tools: `xcode-select --install`) y [gh](https://cli.github.com) con la sesión
+Requisitos: macOS, Cursor, el `python3` de macOS (`/usr/bin/python3`, viene con las Command Line Tools: `xcode-select --install`) y el comando `gh` ([https://cli.github.com/](https://cli.github.com/)) con la sesión
 iniciada, porque el repo es interno y un `curl` sin autenticación recibe 404. Los datos quedan en `~/.cursor/budget/`,
 fuera de todo repo.
 

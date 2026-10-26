@@ -5,8 +5,9 @@ Todo se hace pidiéndoselo al agente: el chat de Cursor, Claude Code o Codex. Si
 
 ## 1. Instalar
 
-Hace falta [gh](https://cli.github.com) con tu sesión de GitHub iniciada: el repo es interno. Si no lo tenés, pedile
-primero al agente *«Instalá gh con brew y decime cómo iniciar sesión»*; el inicio de sesión (`gh auth login`) lo
+Hace falta el comando `gh` (el CLI de GitHub) instalado en tu máquina y con tu sesión de GitHub iniciada: el repo es
+interno. Si no lo tenés, se instala desde [https://cli.github.com/](https://cli.github.com/) (en macOS también podés
+pedirle al agente *«Instalá gh con brew y decime cómo iniciar sesión»*). El inicio de sesión (`gh auth login`) lo
 hacés vos en una terminal, porque abre el navegador.
 
 Después decile:
@@ -146,7 +147,7 @@ la extensión nueva. Si instalaste antes de que existiera el aviso, actualizá u
 
 | Situación | Qué hacer |
 |---|---|
-| `gh: command not found`, o «Hace falta gh con la sesión iniciada» | Instalá gh (`brew install gh`) e iniciá sesión con `gh auth login` en una terminal |
+| `gh: command not found`, o «Hace falta gh con la sesión iniciada» | Instalá gh desde https://cli.github.com/ (o `brew install gh`) e iniciá sesión con `gh auth login` en una terminal |
 | 404 al bajar el instalador | Tu cuenta de GitHub no ve el repo interno: pedí acceso a la organización |
 | No llega ninguna notificación | Configuración del Sistema → Notificaciones → Script Editor → «Permitir notificaciones», y *«Mandame una notificación de prueba de cursor-budget»* |
 | Cursor no frena ni avisa | Cerrá Cursor y abrilo de nuevo: los hooks se leen al arrancar |

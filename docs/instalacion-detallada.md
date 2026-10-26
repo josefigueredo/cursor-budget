@@ -9,7 +9,7 @@ Lo mismo que la [guía con prompts](instalacion.md), con los comandos y su salid
 - Cursor con hooks (`~/.cursor/hooks.json`). Lo medido es de Cursor y `cursor-agent` 2026.10.22.
 - El `python3` de macOS (`/usr/bin/python3`), que viene con las Command Line Tools; si falta,
   `xcode-select --install`. Los hooks corren con ese y no con uno de Homebrew, que desaparece con un `brew upgrade`.
-- [gh](https://cli.github.com) con la sesión iniciada (`brew install gh && gh auth login`), o acceso SSH a GitHub: el
+- El comando `gh` instalado ([https://cli.github.com/](https://cli.github.com/), o `brew install gh`) y con la sesión iniciada (`gh auth login`), o acceso SSH a GitHub: el
   repo es interno y un `curl` sin autenticación recibe 404.
 
 ## 2. Instalar
