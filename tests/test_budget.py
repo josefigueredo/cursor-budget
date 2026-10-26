@@ -380,7 +380,7 @@ class TestReport(Home):
         (self.home / "config.json").write_text(json.dumps({"model_budgets": {"claude-*": 10}}), encoding="utf-8")
         self.run_stop(stop(input_tokens=1_000_000))
         text = render.report(7, home=self.home, color=False, now=NOON)
-        for heading in ("Uso de Cursor", "Uso del ciclo", "Presupuesto por modelo", "Uso por día", "Últimos turnos"):
+        for heading in ("Uso de Cursor", "Uso del ciclo", "Presupuestos por modelo", "Gastos por día", "Últimos turnos"):
             self.assertIn(heading, text)
         self.assertNotIn("\033[", text)
         self.assertIn("Quedan 8 días", text)
@@ -468,7 +468,7 @@ class TestLimits(Home):
 
     def test_show_lists_limits_and_the_check(self):
         text = limits.show(home=self.home, color=False, now=NOON)
-        for heading in ("Límites de cursor-budget", "Generales", "Presupuesto por modelo", "Chequeo"):
+        for heading in ("Límites de cursor-budget", "Generales", "Presupuestos por modelo (ciclo)", "Chequeo"):
             self.assertIn(heading, text)
 
 
@@ -992,9 +992,16 @@ class TestCursorExtension(Home):
 
     def test_the_panel_shows_both_tabs_and_the_detail(self):
         page = self.panel_html(self.sample())
-        for part in ('data-tab="detalle"', 'data-tab="limites"', "Uso del ciclo", "Por modelo", "Por día",
-                     "Chats más caros", "claude-opus-5-5-medium", "Se reinicia"):
+        for part in ('data-tab="detalle"', 'data-tab="limites"', "Uso del ciclo", "<h2>Gastos por modelo</h2>",
+                     "<h2>Gastos por día</h2>", "Chats más caros", "claude-opus-5-5-medium", "Se reinicia"):
             self.assertIn(part, page)
+
+    def test_the_model_budgets_have_a_plural_title_on_both_tabs(self):
+        budget.save_config({"model_budgets": {"claude-opus-*": 40.0}}, home=self.home)
+        for tab in ("detalle", "limites"):
+            page = self.panel_html(self.sample(), tab=tab)
+            self.assertEqual(page.count("<h2>Presupuestos por modelo</h2>"), 2, tab)
+            self.assertNotIn("<h2>Presupuesto por modelo</h2>", page)
 
     def test_the_chats_title_says_since_when_they_are_counted(self):
         data = self.sample()

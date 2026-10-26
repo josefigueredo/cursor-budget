@@ -33,7 +33,7 @@ function detail(d) {
     "</span></div>" + bar(tshare, t.usd >= t.block ? "error" : t.usd >= t.warn ? "warning" : "ok") +
     '<p class="mut">Aviso en ' + money(t.warn, 0) + " · bloqueo en " + money(t.block, 0) + "</p></section>";
   if (d.budgets.length) {
-    out += "<section><h2>Presupuesto por modelo</h2><table>";
+    out += "<section><h2>Presupuestos por modelo</h2><table>";
     d.budgets.forEach(function (b) {
       var s = b.cap ? b.spent / b.cap : 0;
       out += "<tr><td><code>" + esc(b.pattern) + "</code></td><td>" + money(b.spent) + ' <span class="mut">de ' +
@@ -42,12 +42,12 @@ function detail(d) {
     out += "</table></section>";
   }
   var top = d.models.length ? d.models[0].usd : 0;
-  out += "<section><h2>Por modelo</h2>" + (d.models.length ? "<table>" + d.models.map(function (m) {
+  out += "<section><h2>Gastos por modelo</h2>" + (d.models.length ? "<table>" + d.models.map(function (m) {
     return "<tr><td><code>" + esc(m.model) + "</code></td><td>" + money(m.usd) + '</td><td class="w">' +
       bar(top ? m.usd / top : 0, "ok") + "</td></tr>";
   }).join("") + "</table>" : '<p class="mut">Sin turnos en este ciclo.</p>') + "</section>";
   var peak = Math.max.apply(null, d.days.map(function (x) { return x.usd; }).concat([0]));
-  out += '<section><h2>Por día</h2>' + (d.days.length ? '<div class="days">' + d.days.map(function (x) {
+  out += '<section><h2>Gastos por día</h2>' + (d.days.length ? '<div class="days">' + d.days.map(function (x) {
     var h = peak ? Math.max(2, Math.round(x.usd / peak * 80)) : 2;
     return '<div class="day" title="' + date(x.date) + ": " + money(x.usd) + '"><i style="height:' + h + 'px"></i><span>' +
       esc(String(x.date).slice(8)) + "</span></div>";
@@ -83,7 +83,7 @@ function limitsTab(d) {
     return '<span class="chip"><code>' + esc(p) + '</code> <button data-unblock="' + esc(p) + '" title="Desbloquear">✕</button></span>';
   }).join(" ") : '<span class="mut">Ninguno</span>') + '</p><p><input id="block-new" placeholder="p. ej. gemini-*" size="18"> ' +
     '<button data-block>Bloquear</button></p></section>';
-  out += "<section><h2>Presupuesto por modelo</h2><table>" + d.budgets.map(function (b) {
+  out += "<section><h2>Presupuestos por modelo</h2><table>" + d.budgets.map(function (b) {
     return "<tr><td><code>" + esc(b.pattern) + '</code></td><td><input data-budget="' + esc(b.pattern) + '" value="' +
       esc(Number(b.cap).toFixed(2)) + '" size="8"> <button data-budget-save="' + esc(b.pattern) + '">Guardar</button> ' +
       '<button data-budget-remove="' + esc(b.pattern) + '">Quitar</button></td></tr>';

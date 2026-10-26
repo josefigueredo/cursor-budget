@@ -68,7 +68,7 @@ o que ya usaste los dos; el ciclo nunca frena prompts. El reporte muestra el top
 como **aviso** un tope diario mayor que el del ciclo, presupuestos por modelo que suman más que el ciclo, un patrón que
 no coincide con ningún modelo usado y un patrón tapado por otro anterior.
 
-## Presupuesto por modelo
+## Presupuestos por modelo
 
 `model_budgets` asigna un tope del ciclo a cada patrón (`fnmatch`; gana el primero que coincide, en el orden escrito).
 Lo gastado sale de `seed` (por modelo) más las estimaciones posteriores. Las filas del CSV que Auto derivó

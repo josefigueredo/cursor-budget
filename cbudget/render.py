@@ -153,7 +153,7 @@ def report(days: int, home: Path = budget.HOME, color: bool = False, now: Option
             rows.append(paint("● ", model_color(pattern)) + pad(paint(pattern, TEXT), name_w)
                         + paint(f"{money(spent):>9s}", TEXT) + paint(f" / {money(cap):<9s}", MUTED) + "  "
                         + line_bar(used, bar_w, paint, level(used)) + paint(f"{used:5.0%}", level(used), bold=True))
-        out += card("Presupuesto por modelo", rows, size, paint)
+        out += card("Presupuestos por modelo", rows, size, paint)
 
     # Spend per day, stacked by model
     series = budget.daily_by_model(ledger, home, now, cfg["cycle_day"])
@@ -180,7 +180,7 @@ def report(days: int, home: Path = budget.HOME, color: bool = False, now: Option
                 line = ""
             line += item
         rows += [""] + legend + [line]
-        out += card("Uso por día", rows, size, paint)
+        out += card("Gastos por día", rows, size, paint)
 
     # Latest turns
     since = now - days * 86400
