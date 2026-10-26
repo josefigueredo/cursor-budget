@@ -405,6 +405,50 @@ def calibrate(rows, table: dict) -> list:
     return sorted(out, key=lambda r: -r[2])
 
 
+TOKEN_KEYS = ("input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens")
+
+
+def _tokens(event: dict) -> tuple:
+    return tuple(int(float(event.get(k) or 0)) for k in TOKEN_KEYS)
+
+
+def reconcile(rows, ledger: list, slack: float = 600.0) -> dict:
+    """Cursor's billed events against the hook's turns, over the time both cover: from the first turn the hooks
+    recorded to the last event in the export. A turn matches the event with its same four token counts within `slack`
+    seconds (the export stamps the request, the hook writes when the turn ends). An event from before the first
+    turn counts only when it matches: the hooks may not have been installed yet. Measured 2026-10-24: 6 of 6 turns
+    carried exactly the tokens Cursor billed."""
+    events = []
+    for row in rows:
+        label, billed, event = csv_event(row)
+        if label in ("", "usage-correction"):
+            continue
+        stamp = datetime.datetime.fromisoformat((row.get("Date") or "").replace("Z", "+00:00")).timestamp()
+        events.append((stamp, label, billed, _tokens(event)))
+    turns = [t for t in ledger if t.get("input_tokens") is not None]
+    out = {"since": None, "until": None, "events": 0, "matched": 0, "missed": [], "billed": 0.0, "estimated": 0.0}
+    if not events or not turns:
+        return out
+    first, until = min(t["t"] for t in turns), max(e[0] for e in events)
+    since = first - slack
+    pool, used = [t for t in turns if t["t"] <= until + slack], set()
+    for stamp, label, billed, key in sorted(e for e in events if since <= e[0] <= until):
+        hit = next((i for i, t in enumerate(pool)
+                    if i not in used and _tokens(t) == key and abs(t["t"] - stamp) <= slack), None)
+        if hit is None and stamp < first:
+            continue
+        out["events"] += 1
+        if hit is None:
+            out["missed"].append((stamp, label, billed))
+            continue
+        used.add(hit)
+        out["matched"] += 1
+        out["billed"] += billed
+        out["estimated"] += float(pool[hit]["usd"])
+    out["since"], out["until"] = first, until
+    return out
+
+
 def seed(rows, home: Path = HOME, now: Callable[[], float] = time.time, cycle_day: Optional[int] = None) -> dict:
     """Store what Cursor billed this cycle according to its usage CSV, as the base for cycle_total."""
     t = now()

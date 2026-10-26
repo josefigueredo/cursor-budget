@@ -8,6 +8,9 @@ from pathlib import Path
 # Days and cycles are local dates: the fixed clock below reads as a date in Buenos Aires, whatever the machine's zone.
 os.environ["TZ"] = "America/Argentina/Buenos_Aires"
 time.tzset()
+# A throwaway HOME before cbudget is imported: its paths are bound to Path.home() at import, and a test that missed a
+# patch wrote fake turns into the real ~/.cursor/budget/ledger.jsonl on every run.
+os.environ["HOME"] = tempfile.mkdtemp(prefix="cbudget-tests-home-")
 
 from cbudget import budget, cli, limits, render  # noqa: E402
 
@@ -369,6 +372,61 @@ class TestCalibrate(unittest.TestCase):
         self.assertEqual(rows[0], ("grok-4.7-high (Auto Balanced)", 1, 2.0, 2.0, "grok"))
         self.assertEqual([r[0] for r in rows], ["grok-4.7-high (Auto Balanced)", "kimi-k3 (Auto Balanced)"])
 
+    @staticmethod
+    def iso(t):
+        import datetime
+        return datetime.datetime.fromtimestamp(t, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+    def row(self, t, model, write, plain, read, out, usd):
+        return (f'"{self.iso(t)}","u","","","","","","Included","{model}","No","{write}","{plain}","{read}","{out}",'
+                f'"{write + plain + read + out}","{usd}"\n')
+
+    @staticmethod
+    def turn(t, model, write, plain, read, out, usd):
+        return {"t": t, "conversation_id": "x", "model": model, "usd": usd, "input_tokens": write + plain + read,
+                "output_tokens": out, "cache_read_tokens": read, "cache_write_tokens": write}
+
+    def reconcile_fixture(self, tmp):
+        rows = [self.row(NOON - 7200, "claude-opus-5-5-high", 0, 9000, 0, 10, "0.04"),       # before the hooks counted
+                self.row(NOON - 120, "gemini-3.8-flash-low", 0, 300, 0, 1, "0.00"),            # minutes before: not counted
+                self.row(NOON - 20, "gemini-3.8-flash-low", 0, 22884, 0, 1, "0.02"),
+                self.row(NOON + 600, "grok-4.7-high (Auto Balanced)", 0, 11873, 6016, 1584, "0.03"),
+                self.row(NOON + 1800, "gemini-3.1-pro", 0, 45086, 102015, 3288, "0.18")]  # the hook never saw it
+        ledger = [self.turn(NOON, "gemini-3.8-flash-low", 0, 22884, 0, 1, 0.0172),
+                  self.turn(NOON + 626, "auto-smart", 0, 11873, 6016, 1584, 0.0864),
+                  self.turn(NOON + 9000, "claude-sonnet-5-5-high", 0, 500, 0, 5, 0.01)]     # after the export ends
+        return self.write(tmp, *rows), ledger
+
+    def test_reconcile_matches_hook_turns_to_billed_events_by_their_tokens(self):
+        import csv
+        with tempfile.TemporaryDirectory() as tmp:
+            path, ledger = self.reconcile_fixture(tmp)
+            with path.open() as fh:
+                got = budget.reconcile(csv.DictReader(fh), ledger)
+        self.assertEqual((got["events"], got["matched"]), (3, 2))
+        self.assertEqual([(m[1], m[2]) for m in got["missed"]], [("gemini-3.1-pro", 0.18)])
+        self.assertEqual((round(got["billed"], 2), round(got["estimated"], 4)), (0.05, 0.1036))
+
+    def test_report_says_how_many_billed_events_the_hook_saw_and_which_it_missed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path, ledger = self.reconcile_fixture(tmp)
+            report = cli.calibrate_report(path, ledger=ledger)
+        self.assertIn("el hook vio 2 de 3", report)
+        self.assertIn("gemini-3.1-pro", report.split("no vio:")[1])
+        self.assertIn("cobrado $0.05, estimado $0.10", report)
+
+    def test_without_hook_turns_in_the_export_the_report_says_so(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path, _ = self.reconcile_fixture(tmp)
+            self.assertIn("ningún turno de los hooks", cli.calibrate_report(path, ledger=[]))
+
+    def test_gemini_pro_has_its_own_price_and_flash_keeps_gemini(self):
+        table = budget.prices(Path("/nonexistent"))
+        self.assertEqual(budget.rate("gemini-3.1-pro", table)["prefix"], "gemini-3.1-pro")
+        self.assertEqual(budget.rate("gemini-3.8-flash-low", table)["prefix"], "gemini")
+        event = {"model": "gemini-3.1-pro", "input_tokens": 147101, "cache_read_tokens": 102015, "output_tokens": 3288}
+        self.assertAlmostEqual(budget.cost(event, table), 0.18, delta=0.01)  # the one billed event: $0.18
+
     def test_report_flags_a_model_off_by_more_than_ten_percent(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = self.write(tmp, '"d","u","","","","","","Included","cursor-grok-4.6-high","No","0","1000000","0","0","1000000","1.00"\n')
@@ -584,6 +642,27 @@ class TestCli(unittest.TestCase):
             self.assertEqual(len([ln for ln in lines if "cursor-budget" in ln]), 1)
             self.assertIn("/app/cbudget.py", lines[-1])
 
+    def test_the_alias_goes_to_the_file_the_login_shell_reads(self):
+        home = Path.home()
+        self.assertEqual(cli.rc_file("/bin/zsh", "Darwin"), home / ".zshrc")
+        self.assertEqual(cli.rc_file(None, "Darwin"), home / ".zshrc")  # no $SHELL: zsh, macOS's default
+        # Terminal on macOS opens login shells, and a login bash reads ~/.bash_profile, not ~/.bashrc
+        self.assertEqual(cli.rc_file("/bin/bash", "Darwin"), home / ".bash_profile")
+        self.assertEqual(cli.rc_file("/usr/bin/bash", "Linux"), home / ".bashrc")
+        self.assertEqual(cli.rc_file("/usr/bin/zsh", "Linux"), home / ".zshrc")
+        self.assertIsNone(cli.rc_file("/usr/bin/fish", "Linux"))
+        self.assertIsNone(cli.rc_file("/bin/sh", "Darwin"))
+
+    def test_with_another_shell_alias_prints_the_line_and_writes_nothing(self):
+        import contextlib, io
+        from unittest import mock
+        out = io.StringIO()
+        with mock.patch.dict("os.environ", {"SHELL": "/usr/bin/fish"}), contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(["alias"]), 0)
+        self.assertTrue(out.getvalue().startswith("sin alias: "), out.getvalue())
+        self.assertIn("alias cbudget=", out.getvalue())
+        self.assertEqual([p.name for p in Path.home().iterdir() if p.name.startswith((".zsh", ".bash"))], [])
+
     def test_install_keeps_other_hooks_and_is_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "hooks.json"
@@ -727,6 +806,16 @@ class TestUpdate(unittest.TestCase):
             cli.hook(json.dumps(stop(input_tokens=10)))
             cli.hook(json.dumps(stop(input_tokens=10)))
         self.assertEqual(started, [1])
+
+    def test_the_hook_writes_where_budget_home_points_not_to_the_real_home(self):
+        # on_stop's default home is bound at import, so a hook that relied on it wrote test turns into ~/.cursor/budget
+        from unittest import mock
+        with mock.patch.object(budget, "HOME", self.home), mock.patch.object(cli, "APP", self.app), \
+                mock.patch.object(cli, "notify", self.notes.append), mock.patch.object(cli, "spawn_update_check", lambda: None):
+            cli.hook(json.dumps(stop(input_tokens=10)))
+            cli.hook(json.dumps({"hook_event_name": "beforeSubmitPrompt", "model": "claude-sonnet-5-5-high",
+                                 "conversation_id": "c1"}))
+        self.assertEqual(len(budget.read_ledger(self.home)), 1)
 
     def test_the_background_check_detaches_from_the_hook_output(self):
         import subprocess

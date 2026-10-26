@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import platform
@@ -89,21 +90,23 @@ def hook(raw: str) -> dict:
         payload = json.loads(raw or "{}")
         event = payload.get("hook_event_name")
         if event == "stop":
-            answer = budget.on_stop(payload, notify=notify)
+            # budget.HOME is read now, not bound as a default at import: a patched or moved home is honoured
+            answer = budget.on_stop(payload, home=budget.HOME, notify=notify)
             if update.installed(APP) and update.claim(budget.HOME, time.time()):
                 spawn_update_check()
             return answer
         if event == "beforeSubmitPrompt":
-            return budget.on_submit(payload, notify=notify)
+            return budget.on_submit(payload, home=budget.HOME, notify=notify)
     except Exception:  # noqa: BLE001 - see docstring
         pass
     return {}
 
 
-def calibrate_report(csv_path: Path, tolerance: float = 0.10) -> str:
+def calibrate_report(csv_path: Path, tolerance: float = 0.10, ledger: Optional[list] = None) -> str:
     import csv
     with csv_path.open(newline="", encoding="utf-8") as fh:
-        rows = budget.calibrate(csv.DictReader(fh), budget.prices())
+        raw = list(csv.DictReader(fh))
+    rows = budget.calibrate(raw, budget.prices())
     lines = [f"{'modelo':42s} {'eventos':>7s} {'cobrado':>9s} {'estimado':>9s} {'error':>6s}  precio usado"]
     billed = estimated = 0.0
     for model, n, b, e, prefix in rows:
@@ -112,7 +115,24 @@ def calibrate_report(csv_path: Path, tolerance: float = 0.10) -> str:
         flag = "  <- ajustar" if b >= 0.5 and abs(err) > tolerance or prefix == "UNKNOWN" and b > 0 else ""
         lines.append(f"{model:42s} {n:7d} {b:9.2f} {e:9.2f} {err:+6.0%}  {prefix}{flag}")
     lines.append(f"{'total':42s} {'':7s} {billed:9.2f} {estimated:9.2f}")
+    if ledger is not None:
+        lines += [""] + hooks_against_csv(budget.reconcile(raw, ledger))
     return "\n".join(lines)
+
+
+def hooks_against_csv(r: dict) -> list:
+    """What the hooks recorded against what Cursor billed in the same span, turn by turn."""
+    if not r["events"]:
+        return ["Hooks contra el CSV: el CSV no tiene eventos de cuando los hooks ya contaban, o no hay ningún turno de "
+                "los hooks registrado. Exportá el CSV de nuevo después de usar Cursor un rato."]
+    when = lambda t: render.short_date(datetime.date.fromtimestamp(t)) + time.strftime(" %H:%M", time.localtime(t))
+    err = (r["estimated"] - r["billed"]) / r["billed"] if r["billed"] else 0.0
+    lines = [f"Hooks contra el CSV ({when(r['since'])} a {when(r['until'])}):",
+             f"  eventos que cobró Cursor: {r['events']}; el hook vio {r['matched']} de {r['events']} con los mismos tokens",
+             f"  en los que vio: cobrado ${r['billed']:.2f}, estimado ${r['estimated']:.2f} ({err:+.0%})"]
+    if r["missed"]:
+        lines.append("  no vio: " + "; ".join(f"{when(t)} {label} ${usd:.2f}" for t, label, usd in r["missed"]))
+    return lines
 
 
 def _ours(entry: dict) -> bool:
@@ -163,14 +183,24 @@ NOTIFY_HINT_LINUX = ("Mandé una notificación de prueba. Si no la viste, los av
 ALIAS_MARK = "# cursor-budget"
 
 
-def rc_file() -> Path:
-    shell = Path(os.environ.get("SHELL", "zsh")).name
-    return Path.home() / (".bashrc" if shell == "bash" else ".zshrc")
+def rc_file(shell: Optional[str] = None, system: Optional[str] = None) -> Optional[Path]:
+    """The file the login shell ($SHELL) reads at start, or None for a shell whose syntax or file we do not know.
+    No $SHELL reads as zsh, macOS's default. A login bash (what Terminal on macOS opens) reads ~/.bash_profile."""
+    name = Path(shell or os.environ.get("SHELL") or "zsh").name
+    if name == "zsh":
+        return Path.home() / ".zshrc"
+    if name == "bash":
+        return Path.home() / (".bash_profile" if (system or platform.system()) == "Darwin" else ".bashrc")
+    return None
+
+
+def alias_line(entry: Path) -> str:
+    return f"alias cbudget={shlex.quote(command(entry))}  {ALIAS_MARK}"
 
 
 def install_alias(entry: Path, rc: Path) -> bool:
     """Write `alias cbudget=...` into the shell rc, replacing an older cbudget alias. True when the file changed."""
-    line = f"alias cbudget={shlex.quote(command(entry))}  {ALIAS_MARK}"
+    line = alias_line(entry)
     lines = rc.read_text(encoding="utf-8").splitlines() if rc.exists() else []
     kept = [ln for ln in lines if not ln.rstrip().endswith(ALIAS_MARK)]
     if line in lines and len(lines) - len(kept) == 1:
@@ -249,7 +279,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ext = sub.add_parser("extra", help="register the plan's next extra for this cycle, once it was granted")
     ext.add_argument("--by", default=None, help="who registers it, for changes.jsonl (default: terminal or agente)")
     sub.add_parser("install-hook", help="add cbudget to ~/.cursor/hooks.json")
-    sub.add_parser("alias", help="add `alias cbudget=...` to ~/.zshrc (or ~/.bashrc)")
+    sub.add_parser("alias", help="add `alias cbudget=...` to the file your login shell reads (~/.zshrc, ~/.bash_profile or ~/.bashrc)")
     sub.add_parser("notify-test", help="send a test notification, to check that the desktop shows them")
     stl = sub.add_parser("statusline", help="cursor-agent's footer: print the line (stdin: its JSON), or install it")
     stl.add_argument("action", nargs="?", choices=("install", "remove"))
@@ -268,7 +298,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(render.report(args.days, color=color))
         return 0
     if args.cmd == "calibrate":
-        print(calibrate_report(args.csv))
+        print(calibrate_report(args.csv, ledger=budget.read_ledger(budget.HOME)))
         return 0
     if args.cmd == "seed":
         if bool(args.csv) == (args.amount is not None):
@@ -351,6 +381,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
     if args.cmd == "alias":
         rc = rc_file()
+        if rc is None:
+            shell = Path(os.environ.get("SHELL", "")).name
+            print(f"sin alias: no sé dónde configura alias tu shell ({shell}); agregá esta línea donde corresponda: "
+                  f"{alias_line(ENTRY)}")
+            return 0
         print(f"alias agregado en {rc}; abrí otra terminal o corré: source {rc}" if install_alias(ENTRY, rc)
               else f"el alias ya estaba en {rc}")
         return 0
