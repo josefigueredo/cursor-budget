@@ -4,7 +4,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import platform
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -24,19 +26,33 @@ WORKSHOP_URL = "https://probable-dollop-lk5vvym.pages.github.io/serie-cursor.htm
 
 
 OSASCRIPT = "/usr/bin/osascript"  # by full path: Cursor runs hooks with its own PATH
+NOTIFY_SEND = ("/usr/bin/notify-send", "/usr/local/bin/notify-send")  # Linux (libnotify), same reason
+
+
+def notifier(message: str) -> list:
+    """The command that shows `message` on this system: osascript on macOS, notify-send on Linux.
+    Raises OSError when there is none, so notify logs why."""
+    system = platform.system()
+    if system == "Darwin":
+        # The message goes as an argument, not inside the script: AppleScript has no \u escapes, so an embedded
+        # "·" or "á" quoted by json.dumps was a syntax error and the notification never showed.
+        return [OSASCRIPT, "-e", "on run argv", "-e",
+                "display notification (item 1 of argv) with title \"cursor-budget\"", "-e", "end run", message]
+    if system == "Linux":
+        exe = next((p for p in NOTIFY_SEND if Path(p).exists()), None) or shutil.which("notify-send")
+        if not exe:
+            raise OSError("no notify-send (libnotify): install libnotify-bin or libnotify to get the warnings")
+        return [exe, "--app-name=cursor-budget", "cursor-budget", message]
+    raise OSError(f"no notifications on {system}: cursor-budget shows them on macOS and Linux")
 
 
 def notify(message: str) -> None:
-    """A macOS notification; a failure here must never reach Cursor, but it is logged to notify-errors.log so a
+    """A desktop notification; a failure here must never reach Cursor, but it is logged to notify-errors.log so a
     missing notification can be explained."""
     if os.environ.get("CURSOR_BUDGET_NO_NOTIFY"):
         return
-    # The message goes as an argument, not inside the script: AppleScript has no \u escapes, so an embedded
-    # "·" or "á" quoted by json.dumps was a syntax error and the notification never showed.
-    script = ["-e", "on run argv", "-e", "display notification (item 1 of argv) with title \"cursor-budget\"",
-              "-e", "end run"]
     try:
-        done = subprocess.run([OSASCRIPT, *script, message], capture_output=True, timeout=5)
+        done = subprocess.run(notifier(message), capture_output=True, timeout=5)
         error = f"exit {done.returncode}: {done.stderr.decode(errors='replace').strip()}" if done.returncode else ""
     except (OSError, subprocess.SubprocessError) as exc:
         error = f"{type(exc).__name__}: {exc}"
@@ -140,6 +156,9 @@ def install_hook(command: str, path: Path = HOOKS) -> bool:
 NOTIFY_HINT = ("Mandé una notificación de prueba. Si no la viste, los avisos no te van a llegar: abrí Configuración "
                "del Sistema → Notificaciones → Script Editor, activá «Permitir notificaciones» y probá de nuevo con "
                "`cbudget notify-test`.")
+NOTIFY_HINT_LINUX = ("Mandé una notificación de prueba. Si no la viste, los avisos no te van a llegar: instalá "
+                     "notify-send (paquete libnotify-bin en Debian y Ubuntu, libnotify en Fedora y Arch), mirá "
+                     "~/.cursor/budget/notify-errors.log y probá de nuevo con `cbudget notify-test`.")
 
 ALIAS_MARK = "# cursor-budget"
 
@@ -231,7 +250,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ext.add_argument("--by", default=None, help="who registers it, for changes.jsonl (default: terminal or agente)")
     sub.add_parser("install-hook", help="add cbudget to ~/.cursor/hooks.json")
     sub.add_parser("alias", help="add `alias cbudget=...` to ~/.zshrc (or ~/.bashrc)")
-    sub.add_parser("notify-test", help="send a test notification, to check that macOS shows them")
+    sub.add_parser("notify-test", help="send a test notification, to check that the desktop shows them")
     stl = sub.add_parser("statusline", help="cursor-agent's footer: print the line (stdin: its JSON), or install it")
     stl.add_argument("action", nargs="?", choices=("install", "remove"))
     stl.add_argument("--json", action="store_true", help="the numbers as JSON (Cursor's status bar extension)")
@@ -289,7 +308,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
     if args.cmd == "notify-test":
         notify("Prueba: así se ven los avisos de gasto de Cursor.")
-        print(NOTIFY_HINT)
+        print(NOTIFY_HINT_LINUX if platform.system() == "Linux" else NOTIFY_HINT)
         return 0
     if args.cmd == "statusline":
         if args.json:

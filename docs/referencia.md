@@ -216,6 +216,6 @@ editá esa copia: el instalador no la pisa.
 - Los hooks y el alias corren con `/usr/bin/python3`, el de macOS: un python de Homebrew desaparece con un
   `brew upgrade` y el hook dejaría de correr sin avisar. Por eso la instalación pide las Command Line Tools.
 - La app de Cursor no muestra en el chat ningún texto informativo de un hook, solo el motivo de un bloqueo: los avisos
-  llegan como notificaciones de macOS. El gasto se ve en la barra de estado del editor (la extensión; no en la ventana de Agentes) y en el pie de cursor-agent.
+  llegan como notificaciones del escritorio (`osascript` en macOS, `notify-send` en Linux). El gasto se ve en la barra de estado del editor (la extensión; no en la ventana de Agentes) y en el pie de cursor-agent.
 - No es seguridad: quien usa la máquina puede editar `config.json` o correr `allow`. Es un freno para uno mismo.
 - Los precios marcados `estimate` en `prices.json` no están verificados.

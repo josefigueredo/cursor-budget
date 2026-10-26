@@ -119,9 +119,13 @@ else
   skip "Barra de Cursor" "no pude instalar la extensión: Extensions: Install from VSIX… con ${VSIX:-vscode/}"
 fi
 
-# the warnings arrive as macOS notifications; one now shows whether they are allowed (CURSOR_BUDGET_NO_NOTIFY=1 skips it)
+# the warnings arrive as desktop notifications (osascript on macOS, notify-send on Linux); one now shows whether they
+# are allowed (CURSOR_BUDGET_NO_NOTIFY=1 skips it)
 notified=""
-if [ "$(uname)" = Darwin ] && [ -z "${CURSOR_BUDGET_NO_NOTIFY:-}" ]; then
+os=$(uname)
+if [ "$os" = Linux ] && ! command -v notify-send >/dev/null && [ ! -x /usr/bin/notify-send ]; then
+  skip "Avisos" "sin notify-send no hay avisos: instalá libnotify-bin (Debian, Ubuntu) o libnotify (Fedora, Arch)"
+elif { [ "$os" = Darwin ] || [ "$os" = Linux ]; } && [ -z "${CURSOR_BUDGET_NO_NOTIFY:-}" ]; then
   if "$PY" "$DEST/cbudget.py" notify-test >/dev/null 2>&1; then
     ok "Avisos" "te mandé una notificación de prueba"
     notified=yes
@@ -134,6 +138,7 @@ n=1
 step() { echo "  $n. $1"; n=$((n + 1)); }
 step "Abrí una terminal nueva y probá: ${B}cbudget report${N}"
 [ -n "$extension" ] && step "En Cursor: Cmd+Shift+P → ${B}Developer: Reload Window${N}. El gasto queda abajo a la derecha del editor (botón IDE ↗)."
-[ -n "$notified" ] && step "¿No viste la notificación? Configuración del Sistema → Notificaciones → Script Editor → Permitir notificaciones."
+[ -n "$notified" ] && [ "$os" = Darwin ] && step "¿No viste la notificación? Configuración del Sistema → Notificaciones → Script Editor → Permitir notificaciones."
+[ -n "$notified" ] && [ "$os" = Linux ] && step "¿No viste la notificación? Mirá ~/.cursor/budget/notify-errors.log y probá con: cbudget notify-test"
 [ "$what" = "instalación nueva" ] && step "Para cargar lo que ya gastaste este mes, pedíselo al agente: «cargá mi CSV de uso de Cursor»."
 exit "$status"

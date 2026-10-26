@@ -5,7 +5,9 @@ Lo mismo que la [guía con prompts](instalacion.md), con los comandos y su salid
 
 ## 1. Requisitos
 
-- macOS: los avisos son notificaciones de macOS (`osascript`). En Linux el hook registra y bloquea igual, pero no avisa.
+- macOS o Linux. Los avisos son notificaciones del escritorio: `osascript` en macOS y `notify-send` en Linux (paquete
+  `libnotify-bin` en Debian y Ubuntu, `libnotify` en Fedora y Arch). En Linux el alias va igual a `~/.zshrc`: si usás
+  bash, copialo a tu `~/.bashrc`. En Windows no anda.
 - Cursor con hooks (`~/.cursor/hooks.json`). Lo medido es de Cursor y `cursor-agent` 2026.10.22.
 - El `python3` de macOS (`/usr/bin/python3`), que viene con las Command Line Tools; si falta,
   `xcode-select --install`. Los hooks corren con ese y no con uno de Homebrew, que desaparece con un `brew upgrade`.
@@ -44,7 +46,7 @@ hizo la captura de abajo, con esta misma copia del repo en lugar de GitHub:
    y con un `.bak` antes de cambiarlo. Si ya había una entrada de `cbudget` de otra carpeta, la apunta a la nueva.
 3. Agrega `alias cbudget=...` a `~/.zshrc` (o `~/.bashrc`), una sola vez.
 4. Enlaza la skill: `~/.agents/skills/cursor-budget` a la copia, y `~/.claude/skills` y `~/.codex/skills` a ese enlace.
-5. Manda una notificación de prueba (en macOS; `CURSOR_BUDGET_NO_NOTIFY=1` la saltea).
+5. Manda una notificación de prueba (en macOS y en Linux con `notify-send`; `CURSOR_BUDGET_NO_NOTIFY=1` la saltea).
 
 El hook y el alias usan el `python3` con el que se instaló, con ruta absoluta, porque Cursor no siempre hereda el PATH
 de la terminal: si cambiás de versión de Python, volvé a instalar. Volver a correrlo actualiza la copia y nunca toca
@@ -56,8 +58,10 @@ de la terminal: si cambiás de versión de Python, volvé a instalar. Volver a c
 cbudget notify-test
 ```
 
-Manda una notificación y explica qué hacer si no aparece: Configuración del Sistema → Notificaciones → Script Editor →
-«Permitir notificaciones». macOS no le dice al programa si la mostró, por eso la explicación sale siempre.
+Manda una notificación y explica qué hacer si no aparece: en macOS, Configuración del Sistema → Notificaciones → Script
+Editor → «Permitir notificaciones»; en Linux, instalar `notify-send`. Ninguno de los dos le dice al programa si la
+mostró, por eso la explicación sale siempre. Si `notify-send` falla (por ejemplo, sin sesión de escritorio), el motivo
+queda en `~/.cursor/budget/notify-errors.log`.
 
 ## 4. Cargar el ciclo y fijar el tope
 
