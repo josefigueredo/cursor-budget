@@ -16,7 +16,7 @@ if [ -n "${CURSOR_BUDGET_REPO:-}" ]; then
 elif command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
   gh repo clone "$SLUG" "$TMP/repo" -- --quiet --depth 1
 else
-  echo "Hace falta gh con la sesión iniciada (brew install gh && gh auth login), o acceso SSH a GitHub." >&2
+  echo "Hace falta el comando gh con la sesión iniciada: instalalo desde https://cli.github.com/ y corré gh auth login. Pruebo por SSH." >&2
   git clone --quiet --depth 1 "git@github.com:$SLUG.git" "$TMP/repo"
 fi
 
