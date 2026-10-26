@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import platform
@@ -101,10 +102,11 @@ def hook(raw: str) -> dict:
     return {}
 
 
-def calibrate_report(csv_path: Path, tolerance: float = 0.10) -> str:
+def calibrate_report(csv_path: Path, tolerance: float = 0.10, ledger: Optional[list] = None) -> str:
     import csv
     with csv_path.open(newline="", encoding="utf-8") as fh:
-        rows = budget.calibrate(csv.DictReader(fh), budget.prices())
+        raw = list(csv.DictReader(fh))
+    rows = budget.calibrate(raw, budget.prices())
     lines = [f"{'modelo':42s} {'eventos':>7s} {'cobrado':>9s} {'estimado':>9s} {'error':>6s}  precio usado"]
     billed = estimated = 0.0
     for model, n, b, e, prefix in rows:
@@ -113,7 +115,24 @@ def calibrate_report(csv_path: Path, tolerance: float = 0.10) -> str:
         flag = "  <- ajustar" if b >= 0.5 and abs(err) > tolerance or prefix == "UNKNOWN" and b > 0 else ""
         lines.append(f"{model:42s} {n:7d} {b:9.2f} {e:9.2f} {err:+6.0%}  {prefix}{flag}")
     lines.append(f"{'total':42s} {'':7s} {billed:9.2f} {estimated:9.2f}")
+    if ledger is not None:
+        lines += [""] + hooks_against_csv(budget.reconcile(raw, ledger))
     return "\n".join(lines)
+
+
+def hooks_against_csv(r: dict) -> list:
+    """What the hooks recorded against what Cursor billed in the same span, turn by turn."""
+    if not r["events"]:
+        return ["Hooks contra el CSV: el CSV no tiene eventos de cuando los hooks ya contaban, o no hay ningún turno de "
+                "los hooks registrado. Exportá el CSV de nuevo después de usar Cursor un rato."]
+    when = lambda t: render.short_date(datetime.date.fromtimestamp(t)) + time.strftime(" %H:%M", time.localtime(t))
+    err = (r["estimated"] - r["billed"]) / r["billed"] if r["billed"] else 0.0
+    lines = [f"Hooks contra el CSV ({when(r['since'])} a {when(r['until'])}):",
+             f"  eventos que cobró Cursor: {r['events']}; el hook vio {r['matched']} de {r['events']} con los mismos tokens",
+             f"  en los que vio: cobrado ${r['billed']:.2f}, estimado ${r['estimated']:.2f} ({err:+.0%})"]
+    if r["missed"]:
+        lines.append("  no vio: " + "; ".join(f"{when(t)} {label} ${usd:.2f}" for t, label, usd in r["missed"]))
+    return lines
 
 
 def _ours(entry: dict) -> bool:
@@ -279,7 +298,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(render.report(args.days, color=color))
         return 0
     if args.cmd == "calibrate":
-        print(calibrate_report(args.csv))
+        print(calibrate_report(args.csv, ledger=budget.read_ledger(budget.HOME)))
         return 0
     if args.cmd == "seed":
         if bool(args.csv) == (args.amount is not None):

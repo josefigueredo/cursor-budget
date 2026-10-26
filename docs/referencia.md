@@ -187,11 +187,19 @@ precio de entrada × 1.25 (Claude), lectura de caché a su precio, salida a prec
   quedó 4% arriba de lo cobrado y cada modelo entre −7% y +6%. `test_opus_turn_follows_the_formula` fija la fórmula con
   números de ejemplo.
 - Desde un chat de Cursor, escribir en `~/.cursor/budget` pidió correr el comando fuera del sandbox.
+- **Turno por turno contra el CSV** (2026-10-26): los 6 turnos del hook que cayeron dentro de una exportación traían
+  exactamente los tokens que cobró Cursor (entrada, salida, lectura y escritura de caché). De los 7 eventos cobrados en
+  ese lapso, el hook no vio 1, sin agente en la nube ni automatización que lo explique. Un turno de Auto derivado a
+  Grok se estimó en $0.086 y costó $0.03: un turno de Auto puede errar hasta 3 veces; el total del ciclo, no.
+- Ajustar un factor por modelo con los eventos de la primera mitad del mes no mejoró la segunda (el total quedó en
+  ±0,5 puntos): la tabla ya está a ~3% del total cobrado.
 
 ## Calibrar
 
 `cbudget calibrate <csv>` muestra, por modelo, lo cobrado contra lo estimado, y marca con `<- ajustar` los que erran más
-de 10% y los que no coinciden con ningún precio. Para corregir un precio, copiá `prices.json` a `~/.cursor/budget/` y
+de 10% y los que no coinciden con ningún precio. Abajo agrega **Hooks contra el CSV**: en el lapso que cubren los dos,
+cuántos eventos cobró Cursor, cuántos vio el hook con los mismos tokens, cuánto cobró Cursor y cuánto estimó el hook en
+esos, y cuáles no vio. Un evento que el hook no vio no suma al gasto local. Para corregir un precio, copiá `prices.json` a `~/.cursor/budget/` y
 editá esa copia: el instalador no la pisa.
 
 ## Códigos de salida
@@ -208,6 +216,8 @@ editá esa copia: el instalador no la pisa.
   el precio de lista de ese modelo, así que su costo es una estimación a precio de Sonnet 5.5. No está bloqueado por
   defecto; un presupuesto `auto*` sí lo frena al agotarse.
 - El total es una estimación: el tope real del ciclo lo pone Cursor.
+- Lo que no pasa por los hooks de esta máquina (agentes en la nube, automatizaciones, un turno que no terminó en `stop`)
+  no se cuenta. `cbudget calibrate <csv>` dice cuántos eventos cobrados no vio el hook.
 - Si el hook falla, deja pasar el prompt (falla abierto) para no romper Cursor.
 - Si `config.json` no se puede leer, o un valor tiene el tipo equivocado (`"block_day": "15"`), rige el valor por
   defecto y `cbudget limits check` lo marca como error. Ningún comando lo reescribe hasta que lo arregles.
