@@ -89,12 +89,13 @@ def hook(raw: str) -> dict:
         payload = json.loads(raw or "{}")
         event = payload.get("hook_event_name")
         if event == "stop":
-            answer = budget.on_stop(payload, notify=notify)
+            # budget.HOME is read now, not bound as a default at import: a patched or moved home is honoured
+            answer = budget.on_stop(payload, home=budget.HOME, notify=notify)
             if update.installed(APP) and update.claim(budget.HOME, time.time()):
                 spawn_update_check()
             return answer
         if event == "beforeSubmitPrompt":
-            return budget.on_submit(payload, notify=notify)
+            return budget.on_submit(payload, home=budget.HOME, notify=notify)
     except Exception:  # noqa: BLE001 - see docstring
         pass
     return {}

@@ -8,6 +8,9 @@ from pathlib import Path
 # Days and cycles are local dates: the fixed clock below reads as a date in Buenos Aires, whatever the machine's zone.
 os.environ["TZ"] = "America/Argentina/Buenos_Aires"
 time.tzset()
+# A throwaway HOME before cbudget is imported: its paths are bound to Path.home() at import, and a test that missed a
+# patch wrote fake turns into the real ~/.cursor/budget/ledger.jsonl on every run.
+os.environ["HOME"] = tempfile.mkdtemp(prefix="cbudget-tests-home-")
 
 from cbudget import budget, cli, limits, render  # noqa: E402
 
@@ -727,6 +730,16 @@ class TestUpdate(unittest.TestCase):
             cli.hook(json.dumps(stop(input_tokens=10)))
             cli.hook(json.dumps(stop(input_tokens=10)))
         self.assertEqual(started, [1])
+
+    def test_the_hook_writes_where_budget_home_points_not_to_the_real_home(self):
+        # on_stop's default home is bound at import, so a hook that relied on it wrote test turns into ~/.cursor/budget
+        from unittest import mock
+        with mock.patch.object(budget, "HOME", self.home), mock.patch.object(cli, "APP", self.app), \
+                mock.patch.object(cli, "notify", self.notes.append), mock.patch.object(cli, "spawn_update_check", lambda: None):
+            cli.hook(json.dumps(stop(input_tokens=10)))
+            cli.hook(json.dumps({"hook_event_name": "beforeSubmitPrompt", "model": "claude-sonnet-5-5-high",
+                                 "conversation_id": "c1"}))
+        self.assertEqual(len(budget.read_ledger(self.home)), 1)
 
     def test_the_background_check_detaches_from_the_hook_output(self):
         import subprocess
