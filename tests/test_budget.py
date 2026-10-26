@@ -992,9 +992,16 @@ class TestCursorExtension(Home):
 
     def test_the_panel_shows_both_tabs_and_the_detail(self):
         page = self.panel_html(self.sample())
-        for part in ('data-tab="detalle"', 'data-tab="limites"', "Uso del ciclo", "Por modelo", "Por día",
-                     "Chats más caros", "claude-opus-5-5-medium", "Se reinicia"):
+        for part in ('data-tab="detalle"', 'data-tab="limites"', "Uso del ciclo", "<h2>Gastos por modelo</h2>",
+                     "<h2>Gastos por día</h2>", "Chats más caros", "claude-opus-5-5-medium", "Se reinicia"):
             self.assertIn(part, page)
+
+    def test_the_model_budgets_have_a_plural_title_on_both_tabs(self):
+        budget.save_config({"model_budgets": {"claude-opus-*": 40.0}}, home=self.home)
+        for tab in ("detalle", "limites"):
+            page = self.panel_html(self.sample(), tab=tab)
+            self.assertEqual(page.count("<h2>Presupuestos por modelo</h2>"), 2, tab)
+            self.assertNotIn("<h2>Presupuesto por modelo</h2>", page)
 
     def test_the_chats_title_says_since_when_they_are_counted(self):
         data = self.sample()
