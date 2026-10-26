@@ -38,6 +38,10 @@ def data(home: Path = budget.HOME, now: Callable[[], float] = time.time) -> dict
             c["usd"], c["turns"] = round(c["usd"] + e["usd"], 4), c["turns"] + 1
             if e["t"] >= c["last"]:
                 c["last"], c["model"] = e["t"], e.get("model") or "?"
+    # Cursor's CSV has no chat id, so chats exist only from the hooks' first turn; the whole cycle when they were
+    # already counting before it started.
+    counted = [budget.day(e["t"]) for e in ledger]
+    chats_since = None if any(d < start for d in counted) else min((d for d in counted if d >= start), default=None)
     granted = budget.extras_granted(home, t, cfg["cycle_day"])
     custom = budget.user_config(home)
     problems = budget.check_limits(cfg, budget.known_models(ledger, home), cap, home=home)
@@ -51,6 +55,7 @@ def data(home: Path = budget.HOME, now: Callable[[], float] = time.time) -> dict
         "models": [{"model": m, "usd": round(u, 4)} for m, u in sorted(models.items(), key=lambda kv: -kv[1])],
         "days": [{"date": d, "usd": round(sum(series[d].values()), 4)} for d in sorted(series)],
         "chats": sorted(chats.values(), key=lambda c: -c["usd"])[:TOP_CHATS],
+        "chats_since": chats_since,
         "budgets": [{"pattern": p, "cap": float(c), "spent": budget.model_spend(ledger, home, t, cfg["cycle_day"], p)}
                     for p, c in cfg["model_budgets"].items()],
         "limits": [{"key": k, "value": cfg[k], "kind": kind, "help": help_text, "custom": k in custom}

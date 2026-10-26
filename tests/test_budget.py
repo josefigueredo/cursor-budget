@@ -693,6 +693,62 @@ class TestUpdate(unittest.TestCase):
         self.assertEqual(popen.call_args.args[0][-1], "update-check")
 
 
+class TestVersionCommand(unittest.TestCase):
+    """`cbudget version` asks GitHub at that moment: a person runs it, so a second of waiting is fine."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.home = Path(self.tmp.name)
+        self.app = self.home / "app"
+        self.app.mkdir()
+        (self.app / "VERSION").write_text("abc1234def\n", encoding="utf-8")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_version(self, answer):
+        import contextlib, io
+        from unittest import mock
+        from cbudget import update
+        asked, out = [], io.StringIO()
+        def compare(sha):
+            asked.append(sha)
+            return answer
+        with mock.patch.object(budget, "HOME", self.home), mock.patch.object(cli, "APP", self.app), \
+                mock.patch.object(update, "compare_with_main", compare), mock.patch.object(cli, "notify", lambda m: None), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(["version"]), 0)
+        return asked, out.getvalue()
+
+    def test_it_checks_github_now_even_right_after_an_old_check_said_up_to_date(self):
+        from cbudget import update
+        budget.write_json_atomic(self.home / "update.json", {"checked": round(time.time()), "status": "identical"})
+        asked, out = self.run_version(("behind", "fff9999"))
+        self.assertEqual(asked, ["abc1234def"])
+        self.assertIn("instalado: abc1234", out)
+        self.assertIn("hay una versión nueva", out)
+        self.assertNotIn("al día", out)
+
+    def test_up_to_date_says_so(self):
+        _, out = self.run_version(("identical", None))
+        self.assertIn("al día con GitHub", out)
+
+    def test_without_github_it_says_it_could_not_check_and_when_it_last_did(self):
+        budget.write_json_atomic(self.home / "update.json", {"checked": 1792850000, "status": "identical"})
+        _, out = self.run_version(None)
+        self.assertIn("no pude consultar GitHub", out)
+        self.assertIn("24/10", out)
+
+
+class TestHelp(unittest.TestCase):
+    def test_help_points_to_the_workshop_episode(self):
+        import contextlib, io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            cli.main(["--help"])
+        self.assertIn("https://probable-dollop-lk5vvym.pages.github.io/serie-cursor.html#cursor-budget/", out.getvalue())
+
+
 class TestStatusline(Home):
     PAYLOAD = {"model": {"id": "claude-sonnet-5-5-high", "display_name": "Sonnet 5.5"},
                "context_window": {"used_percentage": 34.4}}
@@ -867,6 +923,24 @@ class TestPanel(Home):
         self.assertEqual(d["chats"][0]["turns"], 1)
         json.dumps(d)  # the extension reads it as JSON
 
+    def test_chats_say_since_when_the_hooks_count_them(self):
+        # Cursor's CSV has no chat id: before the first counted turn of the cycle there are no chats to rank.
+        self.run_stop(stop(conv="hoy", input_tokens=100_000))
+        self.assertEqual(self.data()["chats_since"], "2026-10-24")
+        budget.seed_amount(10.0, home=self.home, now=lambda: NOON)
+        self.assertEqual(self.data()["chats_since"], "2026-10-24")
+
+    def test_chats_cover_the_cycle_when_the_hooks_counted_before_it(self):
+        with (self.home / "ledger.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"t": NOON - 40 * 86400, "usd": 1.0, "conversation_id": "viejo"}) + "\n")
+        self.run_stop(stop(conv="hoy", input_tokens=100_000))
+        d = self.data()
+        self.assertIsNone(d["chats_since"])
+        self.assertEqual([c["conversation_id"] for c in d["chats"]], ["hoy"])
+
+    def test_without_turns_there_is_no_since(self):
+        self.assertIsNone(self.data()["chats_since"])
+
     def test_limits_carry_value_kind_help_and_whether_they_were_changed(self):
         budget.save_config({"block_day": 12.0}, home=self.home)
         limits_ = {x["key"]: x for x in self.data()["limits"]}
@@ -921,6 +995,18 @@ class TestCursorExtension(Home):
         for part in ('data-tab="detalle"', 'data-tab="limites"', "Uso del ciclo", "Por modelo", "Por día",
                      "Chats más caros", "claude-opus-5-5-medium", "Se reinicia"):
             self.assertIn(part, page)
+
+    def test_the_chats_title_says_since_when_they_are_counted(self):
+        data = self.sample()
+        data["chats_since"] = "2026-10-24"
+        page = self.panel_html(data)
+        self.assertIn("Chats más caros desde el 24 oct", page)
+        self.assertNotIn("Chats más caros del ciclo", page)
+        self.assertIn("no dice de qué chat", page)
+        data["chats_since"] = None
+        page = self.panel_html(data)
+        self.assertIn("Chats más caros del ciclo", page)
+        self.assertNotIn("no dice de qué chat", page)
 
     def test_the_limits_tab_has_an_input_per_limit_and_the_blocked_models(self):
         page = self.panel_html(self.sample(), tab="limites")

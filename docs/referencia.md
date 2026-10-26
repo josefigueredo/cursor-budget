@@ -25,7 +25,7 @@ cbudget extra                # registra el extra del plan que te otorgaron (+$75
 cbudget calibrate usage.csv  # cobrado contra estimado por modelo
 cbudget notify-test          # manda una notificación de prueba y explica cómo habilitarlas
 cbudget statusline install   # el gasto en el pie de cursor-agent (remove lo quita; no pisa una statusLine ajena)
-cbudget version              # el commit instalado y si hay uno más nuevo
+cbudget version              # el commit instalado y si hay uno más nuevo (le pregunta a GitHub en el momento)
 cbudget update               # instala la última versión desde GitHub, sin tocar límites, registro ni seed
 cbudget install-hook         # suma el hook a ~/.cursor/hooks.json sin tocar los demás (deja un .bak)
 cbudget alias                # agrega o actualiza el alias en ~/.zshrc (o ~/.bashrc)

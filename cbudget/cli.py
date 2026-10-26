@@ -20,6 +20,7 @@ APP = ENTRY.parent
 # The hooks and the alias run with macOS's own python, not the one that ran the installer: a Homebrew or venv python
 # disappears with `brew upgrade` or the venv, and the hook would silently stop running.
 PYTHON = "/usr/bin/python3"
+WORKSHOP_URL = "https://probable-dollop-lk5vvym.pages.github.io/serie-cursor.html#cursor-budget/"
 
 
 OSASCRIPT = "/usr/bin/osascript"  # by full path: Cursor runs hooks with its own PATH
@@ -196,7 +197,9 @@ def limits_command(args) -> int:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    parser = argparse.ArgumentParser(prog="cbudget", description="Cursor spend: ledger, warnings and blocks.")
+    parser = argparse.ArgumentParser(
+        prog="cbudget", description="Cursor spend: ledger, warnings and blocks.",
+        epilog="Episodio del taller, paso a paso: " + WORKSHOP_URL, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("hook", help="Cursor hook entry point (stdin: the hook payload)")
     rep = sub.add_parser("report", help="estimated spend from the ledger")
@@ -297,12 +300,25 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(json.dumps(panel.data(), ensure_ascii=False))
         return 0
     if args.cmd == "version":
-        sha, known = update.installed(APP), update.state(budget.HOME)
+        # asked now, not the daily check's last answer: a person runs this, so waiting a second is fine
+        sha = update.installed(APP)
         print(f"instalado: {sha[:7] if sha else 'sin registrar (instalado antes de que se registrara la versión)'}")
-        if known.get("status") == "behind":
+        if not sha:
+            print("actualizá una vez con `cbudget update` para que se registre")
+            return 0
+        known = update.state(budget.HOME)
+        status = update.check(budget.HOME, APP, compare=update.compare_with_main, notify=lambda msg: None)
+        if status == "behind":
             print("hay una versión nueva: corré `cbudget update`")
-        elif known.get("status"):
-            print("al día con GitHub" if known["status"] == "identical" else f"estado: {known['status']}")
+        elif status == "identical":
+            print("al día con GitHub")
+        elif status:
+            print(f"estado frente a GitHub: {status}")
+        else:
+            when = time.strftime("%d/%m %H:%M", time.localtime(known["checked"])) if known.get("checked") else ""
+            last = {"behind": "había una versión nueva", "identical": "estaba al día"}.get(known.get("status"), "")
+            print("no pude consultar GitHub (hace falta gh con sesión y red)"
+                  + (f"; la última revisión, el {when}, {last}" if when and last else ""))
         return 0
     if args.cmd == "update":
         gh = update.gh_path()
