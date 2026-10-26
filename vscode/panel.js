@@ -52,7 +52,10 @@ function detail(d) {
     return '<div class="day" title="' + date(x.date) + ": " + money(x.usd) + '"><i style="height:' + h + 'px"></i><span>' +
       esc(String(x.date).slice(8)) + "</span></div>";
   }).join("") + "</div>" : '<p class="mut">Sin días con gasto.</p>') + "</section>";
-  out += "<section><h2>Chats más caros del ciclo</h2>" + (d.chats.length ? "<table>" + d.chats.map(function (c) {
+  // Cursor's CSV has no chat id: before the hooks' first turn of the cycle there are no chats to rank.
+  out += "<section><h2>Chats más caros " + (d.chats_since ? "desde el " + date(d.chats_since) : "del ciclo") + "</h2>" +
+    (d.chats_since ? '<p class="mut">Antes, el gasto sale del CSV de Cursor, que no dice de qué chat es.</p>' : "") +
+    (d.chats.length ? "<table>" + d.chats.map(function (c) {
     return "<tr><td><code>" + esc(String(c.conversation_id).slice(0, 8)) + "</code></td><td>" + esc(c.model) +
       "</td><td>" + esc(c.turns) + (c.turns === 1 ? " turno" : " turnos") + "</td><td>" + money(c.usd) + "</td></tr>";
   }).join("") + "</table>" : '<p class="mut">Sin chats registrados.</p>') + "</section>";
