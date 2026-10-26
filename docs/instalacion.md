@@ -26,9 +26,10 @@ Si ya tenés el repo clonado, también sirve: *«Instalá cursor-budget desde ~/
 
 ## 2. Comprobar las notificaciones
 
-Los avisos llegan como notificaciones de macOS. Al terminar, el instalador manda una de prueba: *«Prueba: así se ven los
-avisos de gasto de Cursor.»* Si no la viste, macOS las tiene bloqueadas: abrí Configuración del Sistema →
-Notificaciones → Script Editor y activá «Permitir notificaciones». Para probar de nuevo:
+Los avisos llegan como notificaciones del escritorio. Al terminar, el instalador manda una de prueba: *«Prueba: así se
+ven los avisos de gasto de Cursor.»* Si no la viste, en macOS están bloqueadas: abrí Configuración del Sistema →
+Notificaciones → Script Editor y activá «Permitir notificaciones». En Linux salen con `notify-send`: si no lo tenés, el
+instalador te dice qué paquete instalar. Para probar de nuevo:
 
 > *«Mandame una notificación de prueba de cursor-budget»*
 
@@ -149,7 +150,7 @@ la extensión nueva. Si instalaste antes de que existiera el aviso, actualizá u
 |---|---|
 | `gh: command not found`, o «Hace falta gh con la sesión iniciada» | Instalá gh desde https://cli.github.com/ (o `brew install gh`) e iniciá sesión con `gh auth login` en una terminal |
 | 404 al bajar el instalador | Tu cuenta de GitHub no ve el repo interno: pedí acceso a la organización |
-| No llega ninguna notificación | Configuración del Sistema → Notificaciones → Script Editor → «Permitir notificaciones», y *«Mandame una notificación de prueba de cursor-budget»* |
+| No llega ninguna notificación | En macOS, Configuración del Sistema → Notificaciones → Script Editor → «Permitir notificaciones»; en Linux, instalá `notify-send` y mirá `~/.cursor/budget/notify-errors.log`. Después, *«Mandame una notificación de prueba de cursor-budget»* |
 | Cursor no frena ni avisa | Cerrá Cursor y abrilo de nuevo: los hooks se leen al arrancar |
 | El agente no encuentra la skill | Abrí un chat nuevo; si sigue sin verla, reiniciá Cursor |
 | El agente pide correr el comando fuera del sandbox | Es esperable: los límites viven en `~/.cursor/budget`. Aceptalo |

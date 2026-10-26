@@ -1,7 +1,7 @@
 # cursor-budget
 
 Un freno de gasto para Cursor: dos hooks globales y un CLI chico (`cbudget`), con una skill para manejarlo desde el chat.
-Después de cada turno estima cuánto costó y te avisa con una notificación de macOS cuando un chat, el día, el ciclo o un
+Después de cada turno estima cuánto costó y te avisa con una notificación del escritorio (macOS o Linux) cuando un chat, el día, el ciclo o un
 modelo pasan su límite. Antes de cada prompt, si ya llegaste al límite de bloqueo o el modelo está bloqueado, lo frena
 sin que llegue al modelo, con costo cero.
 

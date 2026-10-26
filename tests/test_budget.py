@@ -487,7 +487,7 @@ class TestCli(unittest.TestCase):
     def test_notify_calls_osascript_by_its_full_path_so_the_hook_path_does_not_matter(self):
         import subprocess
         from unittest import mock
-        with mock.patch.dict("os.environ", {"PATH": "/nonexistent"}), \
+        with mock.patch.dict("os.environ", {"PATH": "/nonexistent"}), mock.patch.object(cli.platform, "system", lambda: "Darwin"), \
                 mock.patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")) as run:
             cli.notify("hola")
         self.assertEqual(run.call_args[0][0][0], "/usr/bin/osascript")
@@ -497,7 +497,8 @@ class TestCli(unittest.TestCase):
         import subprocess
         from unittest import mock
         message = 'turno ~$0.03 · ciclo "así" de $150'
-        with mock.patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")) as run:
+        with mock.patch.object(cli.platform, "system", lambda: "Darwin"), \
+                mock.patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")) as run:
             cli.notify(message)
         argv = run.call_args[0][0]
         self.assertEqual(argv[-1], message)
@@ -506,7 +507,8 @@ class TestCli(unittest.TestCase):
     def test_a_failed_notification_is_logged_instead_of_lost(self):
         from unittest import mock
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(budget, "HOME", Path(tmp)), \
-                mock.patch.object(cli, "OSASCRIPT", "/nonexistent/osascript"):
+                mock.patch.object(cli, "OSASCRIPT", "/nonexistent/osascript"), \
+                mock.patch.object(cli.platform, "system", lambda: "Darwin"):
             cli.notify("hola")
             [line] = (Path(tmp) / "notify-errors.log").read_text(encoding="utf-8").splitlines()
         entry = json.loads(line)
@@ -516,14 +518,59 @@ class TestCli(unittest.TestCase):
     def test_notify_test_sends_one_notification_and_says_how_to_allow_them(self):
         import contextlib, io
         sent, out = [], io.StringIO()
+        from unittest import mock
         original, cli.notify = cli.notify, sent.append
         try:
-            with contextlib.redirect_stdout(out):
+            with contextlib.redirect_stdout(out), mock.patch.object(cli.platform, "system", lambda: "Darwin"):
                 self.assertEqual(cli.main(["notify-test"]), 0)
         finally:
             cli.notify = original
         self.assertEqual(len(sent), 1)
         self.assertIn("Script Editor", out.getvalue())
+
+    def test_on_linux_notify_send_shows_it_by_its_full_path(self):
+        import subprocess
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            exe = Path(tmp) / "notify-send"
+            exe.write_text("#!/bin/sh\n")
+            exe.chmod(0o755)
+            with mock.patch.dict("os.environ", {"PATH": "/nonexistent"}), mock.patch.object(cli, "NOTIFY_SEND", (str(exe),)), \
+                    mock.patch.object(cli.platform, "system", lambda: "Linux"), \
+                    mock.patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"", b"")) as run:
+                cli.notify('turno ~$0.03 · "así"')
+        self.assertEqual(run.call_args[0][0], [str(exe), "--app-name=cursor-budget", "cursor-budget", 'turno ~$0.03 · "así"'])
+
+    def test_on_linux_without_notify_send_the_log_says_so(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(budget, "HOME", Path(tmp)), \
+                mock.patch.dict("os.environ", {"PATH": "/nonexistent"}), \
+                mock.patch.object(cli, "NOTIFY_SEND", ("/nonexistent/notify-send",)), \
+                mock.patch.object(cli.platform, "system", lambda: "Linux"):
+            cli.notify("hola")
+            [line] = (Path(tmp) / "notify-errors.log").read_text(encoding="utf-8").splitlines()
+        self.assertIn("notify-send", json.loads(line)["error"])
+
+    def test_on_another_system_nothing_runs_and_the_log_says_why(self):
+        import subprocess
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(budget, "HOME", Path(tmp)), \
+                mock.patch.object(cli.platform, "system", lambda: "Windows"), \
+                mock.patch.object(subprocess, "run") as run:
+            cli.notify("hola")
+            [line] = (Path(tmp) / "notify-errors.log").read_text(encoding="utf-8").splitlines()
+        run.assert_not_called()
+        self.assertIn("Windows", json.loads(line)["error"])
+
+    def test_notify_test_on_linux_points_to_notify_send(self):
+        import contextlib, io
+        from unittest import mock
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), mock.patch.object(cli, "notify", lambda m: None), \
+                mock.patch.object(cli.platform, "system", lambda: "Linux"):
+            self.assertEqual(cli.main(["notify-test"]), 0)
+        self.assertIn("notify-send", out.getvalue())
+        self.assertNotIn("Script Editor", out.getvalue())
 
     def test_alias_is_added_once_and_replaced_when_the_folder_moves(self):
         with tempfile.TemporaryDirectory() as tmp:
