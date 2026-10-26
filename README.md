@@ -66,7 +66,7 @@ fuera de todo repo.
 python3 -m unittest discover -s tests
 /usr/bin/python3 -m unittest discover -s tests   # compatibilidad con 3.9
 python3 ../harness-docs/hdoc.py check            # la documentación sigue el formato de las skills de Harness
-docs/img/src/capturas.sh                         # rehace todas las capturas
+docs/img/src/capturas.sh [terminal-report ...]   # rehace las capturas (todas, o las nombradas)
 ```
 
 El episodio del taller de skills (instalar, el caso principal en el chat de Cursor, la terminal, cuando te frena,
@@ -76,4 +76,6 @@ quien presenta. La terminal sale en color: sus pasos `term` llevan `"color": tru
 `python3 <taller>/build.py --root workshop build`.
 
 TDD y Conventional Commits. `docs/img/src/capturas.sh` corre los guiones de terminal contra un `HOME` descartable, sin
-mandar notificaciones, arma las maquetas con `gen_mocks.py` y pasa todo a PNG con `hdoc render`.
+mandar notificaciones, arma las maquetas con `gen_mocks.py` y pasa todo a PNG con `hdoc render`. Corre con un reloj fijo
+(`docs/img/src/fixed_clock/`) y la zona horaria de los tests, así que volver a correrlo solo cambia las capturas cuyo
+comando o código cambió; lo único que depende de la máquina es el commit instalado y si hay Cursor para la extensión.
