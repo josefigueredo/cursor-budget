@@ -6,8 +6,7 @@ Lo mismo que la [guía con prompts](instalacion.md), con los comandos y su salid
 ## 1. Requisitos
 
 - macOS o Linux. Los avisos son notificaciones del escritorio: `osascript` en macOS y `notify-send` en Linux (paquete
-  `libnotify-bin` en Debian y Ubuntu, `libnotify` en Fedora y Arch). En Linux el alias va igual a `~/.zshrc`: si usás
-  bash, copialo a tu `~/.bashrc`. En Windows no anda.
+  `libnotify-bin` en Debian y Ubuntu, `libnotify` en Fedora y Arch). En Windows no anda.
 - Cursor con hooks (`~/.cursor/hooks.json`). Lo medido es de Cursor y `cursor-agent` 2026.10.22.
 - El `python3` de macOS (`/usr/bin/python3`), que viene con las Command Line Tools; si falta,
   `xcode-select --install`. Los hooks corren con ese y no con uno de Homebrew, que desaparece con un `brew upgrade`.
@@ -44,7 +43,9 @@ hizo la captura de abajo, con esta misma copia del repo en lugar de GitHub:
    aunque el repo se mueva o cambie de rama.
 2. Suma `cbudget hook` a los eventos `stop` y `beforeSubmitPrompt` de `~/.cursor/hooks.json`, sin tocar los demás hooks
    y con un `.bak` antes de cambiarlo. Si ya había una entrada de `cbudget` de otra carpeta, la apunta a la nueva.
-3. Agrega `alias cbudget=...` a `~/.zshrc` (o `~/.bashrc`), una sola vez.
+3. Agrega `alias cbudget=...`, una sola vez, al archivo que lee tu shell (la de `$SHELL`): `~/.zshrc` con zsh;
+   con bash, `~/.bash_profile` en macOS (Terminal abre shells de login) y `~/.bashrc` en Linux. Con otra shell (fish,
+   sh) no escribe nada: `cbudget alias` te da la línea para pegar donde corresponda.
 4. Enlaza la skill: `~/.agents/skills/cursor-budget` a la copia, y `~/.claude/skills` y `~/.codex/skills` a ese enlace.
 5. Manda una notificación de prueba (en macOS y en Linux con `notify-send`; `CURSOR_BUDGET_NO_NOTIFY=1` la saltea).
 
@@ -106,7 +107,7 @@ Cursor le pasa cada evento por stdin y lee la respuesta por stdout. Se puede pro
 No hay desinstalador; son cuatro pasos:
 
 1. En `~/.cursor/hooks.json`, borrá las dos entradas cuyo `command` termina en `cbudget.py hook`.
-2. En `~/.zshrc` (o `~/.bashrc`), borrá la línea que termina en `# cursor-budget`.
+2. En `~/.zshrc`, `~/.bash_profile` o `~/.bashrc` (el que tenga), borrá la línea que termina en `# cursor-budget`.
 3. Borrá los enlaces `~/.agents/skills/cursor-budget`, `~/.claude/skills/cursor-budget` y
    `~/.codex/skills/cursor-budget`.
 4. Borrá `~/.cursor/budget/app`. El resto de `~/.cursor/budget/` es tu registro y tus límites: borralo solo si no los

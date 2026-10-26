@@ -15,7 +15,7 @@ Después decile:
 > *«Instalá cursor-budget: corré `gh api repos/josefigueredo/cursor-budget/contents/bootstrap.sh -H "Accept: application/vnd.github.raw" | bash`»*
 
 El agente baja el instalador del repo y lo corre. Copia el programa a `~/.cursor/budget/app`, suma los dos hooks a
-`~/.cursor/hooks.json` sin tocar los que ya tenías, agrega el alias `cbudget` a tu `~/.zshrc` y deja la skill a mano de
+`~/.cursor/hooks.json` sin tocar los que ya tenías, agrega el alias `cbudget` al archivo de tu shell (`~/.zshrc`, o el de bash) y deja la skill a mano de
 Cursor, Claude Code y Codex. También instala una extensión chica en Cursor para ver el gasto en la barra de estado del editor, y
 pone el gasto en el pie de cursor-agent si lo usás (paso 5). Desde Cursor, el agente puede pedirte permiso para correrlo
 fuera del sandbox, porque escribe en tu carpeta personal: aceptalo.

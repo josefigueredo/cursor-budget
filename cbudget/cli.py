@@ -164,14 +164,24 @@ NOTIFY_HINT_LINUX = ("Mandé una notificación de prueba. Si no la viste, los av
 ALIAS_MARK = "# cursor-budget"
 
 
-def rc_file() -> Path:
-    shell = Path(os.environ.get("SHELL", "zsh")).name
-    return Path.home() / (".bashrc" if shell == "bash" else ".zshrc")
+def rc_file(shell: Optional[str] = None, system: Optional[str] = None) -> Optional[Path]:
+    """The file the login shell ($SHELL) reads at start, or None for a shell whose syntax or file we do not know.
+    No $SHELL reads as zsh, macOS's default. A login bash (what Terminal on macOS opens) reads ~/.bash_profile."""
+    name = Path(shell or os.environ.get("SHELL") or "zsh").name
+    if name == "zsh":
+        return Path.home() / ".zshrc"
+    if name == "bash":
+        return Path.home() / (".bash_profile" if (system or platform.system()) == "Darwin" else ".bashrc")
+    return None
+
+
+def alias_line(entry: Path) -> str:
+    return f"alias cbudget={shlex.quote(command(entry))}  {ALIAS_MARK}"
 
 
 def install_alias(entry: Path, rc: Path) -> bool:
     """Write `alias cbudget=...` into the shell rc, replacing an older cbudget alias. True when the file changed."""
-    line = f"alias cbudget={shlex.quote(command(entry))}  {ALIAS_MARK}"
+    line = alias_line(entry)
     lines = rc.read_text(encoding="utf-8").splitlines() if rc.exists() else []
     kept = [ln for ln in lines if not ln.rstrip().endswith(ALIAS_MARK)]
     if line in lines and len(lines) - len(kept) == 1:
@@ -250,7 +260,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ext = sub.add_parser("extra", help="register the plan's next extra for this cycle, once it was granted")
     ext.add_argument("--by", default=None, help="who registers it, for changes.jsonl (default: terminal or agente)")
     sub.add_parser("install-hook", help="add cbudget to ~/.cursor/hooks.json")
-    sub.add_parser("alias", help="add `alias cbudget=...` to ~/.zshrc (or ~/.bashrc)")
+    sub.add_parser("alias", help="add `alias cbudget=...` to the file your login shell reads (~/.zshrc, ~/.bash_profile or ~/.bashrc)")
     sub.add_parser("notify-test", help="send a test notification, to check that the desktop shows them")
     stl = sub.add_parser("statusline", help="cursor-agent's footer: print the line (stdin: its JSON), or install it")
     stl.add_argument("action", nargs="?", choices=("install", "remove"))
@@ -352,6 +362,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
     if args.cmd == "alias":
         rc = rc_file()
+        if rc is None:
+            shell = Path(os.environ.get("SHELL", "")).name
+            print(f"sin alias: no sé dónde configura alias tu shell ({shell}); agregá esta línea donde corresponda: "
+                  f"{alias_line(ENTRY)}")
+            return 0
         print(f"alias agregado en {rc}; abrí otra terminal o corré: source {rc}" if install_alias(ENTRY, rc)
               else f"el alias ya estaba en {rc}")
         return 0

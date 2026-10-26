@@ -28,7 +28,7 @@ cbudget statusline install   # el gasto en el pie de cursor-agent (remove lo qui
 cbudget version              # el commit instalado y si hay uno más nuevo (le pregunta a GitHub en el momento)
 cbudget update               # instala la última versión desde GitHub, sin tocar límites, registro ni seed
 cbudget install-hook         # suma el hook a ~/.cursor/hooks.json sin tocar los demás (deja un .bak)
-cbudget alias                # agrega o actualiza el alias en ~/.zshrc (o ~/.bashrc)
+cbudget alias                # agrega o actualiza el alias en el archivo de tu shell (~/.zshrc, ~/.bash_profile o ~/.bashrc)
 cbudget hook                 # lo que corre Cursor: lee el evento por stdin y contesta JSON
 cbudget statusline           # lo que corre cursor-agent: lee su JSON por stdin e imprime la línea del pie
 cbudget panel                # lo que lee el panel de la extensión: el detalle y los límites, en JSON

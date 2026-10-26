@@ -73,7 +73,11 @@ else fail "Hooks" "$out"; fi
 
 if out="$("$PY" "$DEST/cbudget.py" alias 2>&1)"; then
   rc="${out##* en }"; rc="${rc%%;*}"
-  case "$out" in *ya*) ok "Alias" "cbudget, ya estaba en $rc" ;; *) ok "Alias" "cbudget agregado en $rc (abrí una terminal nueva)" ;; esac
+  case "$out" in
+    "sin alias"*) skip "Alias" "tu shell no es zsh ni bash: cbudget alias te da la línea para pegar" ;;
+    *ya*) ok "Alias" "cbudget, ya estaba en $rc" ;;
+    *) ok "Alias" "cbudget agregado en $rc (abrí una terminal nueva)" ;;
+  esac
 else fail "Alias" "$out"; fi
 
 link() {  # link <target> <path>: create or refresh a symlink, never replace a real file or directory

@@ -587,6 +587,27 @@ class TestCli(unittest.TestCase):
             self.assertEqual(len([ln for ln in lines if "cursor-budget" in ln]), 1)
             self.assertIn("/app/cbudget.py", lines[-1])
 
+    def test_the_alias_goes_to_the_file_the_login_shell_reads(self):
+        home = Path.home()
+        self.assertEqual(cli.rc_file("/bin/zsh", "Darwin"), home / ".zshrc")
+        self.assertEqual(cli.rc_file(None, "Darwin"), home / ".zshrc")  # no $SHELL: zsh, macOS's default
+        # Terminal on macOS opens login shells, and a login bash reads ~/.bash_profile, not ~/.bashrc
+        self.assertEqual(cli.rc_file("/bin/bash", "Darwin"), home / ".bash_profile")
+        self.assertEqual(cli.rc_file("/usr/bin/bash", "Linux"), home / ".bashrc")
+        self.assertEqual(cli.rc_file("/usr/bin/zsh", "Linux"), home / ".zshrc")
+        self.assertIsNone(cli.rc_file("/usr/bin/fish", "Linux"))
+        self.assertIsNone(cli.rc_file("/bin/sh", "Darwin"))
+
+    def test_with_another_shell_alias_prints_the_line_and_writes_nothing(self):
+        import contextlib, io
+        from unittest import mock
+        out = io.StringIO()
+        with mock.patch.dict("os.environ", {"SHELL": "/usr/bin/fish"}), contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(["alias"]), 0)
+        self.assertTrue(out.getvalue().startswith("sin alias: "), out.getvalue())
+        self.assertIn("alias cbudget=", out.getvalue())
+        self.assertEqual([p.name for p in Path.home().iterdir() if p.name.startswith((".zsh", ".bash"))], [])
+
     def test_install_keeps_other_hooks_and_is_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "hooks.json"
