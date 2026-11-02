@@ -400,9 +400,24 @@ def calibrate(rows, table: dict) -> list:
             continue
         n, b, e = acc.get(label, (0, 0.0, 0.0))
         acc[label] = (n + 1, b + billed, e + cost(event, table))
-    out = [(m, n, round(b, 2), round(e, 2), rate(m.split(" (")[0], table).get("prefix", "UNKNOWN"))
+    # 4 decimals: Cursor bills cheap events in tenths of a cent ($0.004), and cents would read them as $0.00 and +0%
+    out = [(m, n, round(b, 4), round(e, 4), rate(m.split(" (")[0], table).get("prefix", "UNKNOWN"))
            for m, (n, b, e) in acc.items()]
     return sorted(out, key=lambda r: -r[2])
+
+
+def auto_view(rows, table: dict) -> list:
+    """Auto events as the hook prices them: (model in the CSV, events, billed, estimated with the auto row). The CSV
+    names the routed model (`grok-4.7-high (Auto Balanced)`) or just `auto`, but the hook only gets auto-<mode>
+    (auto-smart, measured 2026-10-24), so every one of them is priced with the auto row."""
+    acc = {}
+    for row in rows:
+        label, billed, event = csv_event(row)
+        if label != "auto" and "(Auto" not in label:
+            continue
+        n, b, e = acc.get(label, (0, 0.0, 0.0))
+        acc[label] = (n + 1, b + billed, e + cost({**event, "model": "auto"}, table))
+    return sorted(((m, n, round(b, 4), round(e, 4)) for m, (n, b, e) in acc.items()), key=lambda r: -r[2])
 
 
 TOKEN_KEYS = ("input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens")

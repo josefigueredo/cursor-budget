@@ -197,7 +197,10 @@ precio de entrada × 1.25 (Claude), lectura de caché a su precio, salida a prec
 ## Calibrar
 
 `cbudget calibrate <csv>` muestra, por modelo, lo cobrado contra lo estimado, y marca con `<- ajustar` los que erran más
-de 10% y los que no coinciden con ningún precio. Abajo agrega **Hooks contra el CSV**: en el lapso que cubren los dos,
+de 10% y los que no coinciden con ningún precio. El error se calcula antes de redondear: Cursor cobra eventos chicos en
+décimas de centavo ($0.004). Después viene **Auto, como lo ve el hook**: el CSV dice a qué modelo mandó Auto cada turno
+(`grok-4.7-high (Auto Balanced)`), pero al hook solo le llega `auto-<modo>`, así que todos se cotizan con la fila `auto`;
+la sección muestra cuánto erra esa fila por modelo enrutado y en total. Abajo agrega **Hooks contra el CSV**: en el lapso que cubren los dos,
 cuántos eventos cobró Cursor, cuántos vio el hook con los mismos tokens, cuánto cobró Cursor y cuánto estimó el hook en
 esos, y cuáles no vio. Un evento que el hook no vio no suma al gasto local. Para corregir un precio, copiá `prices.json` a `~/.cursor/budget/` y
 editá esa copia: el instalador no la pisa.

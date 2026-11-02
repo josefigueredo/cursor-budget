@@ -372,6 +372,39 @@ class TestCalibrate(unittest.TestCase):
         self.assertEqual(rows[0], ("grok-4.7-high (Auto Balanced)", 1, 2.0, 2.0, "grok"))
         self.assertEqual([r[0] for r in rows], ["grok-4.7-high (Auto Balanced)", "kimi-k3 (Auto Balanced)"])
 
+    def test_a_cheap_event_keeps_its_error_instead_of_rounding_to_zero(self):
+        # Usage CSV 2026-11-02: one Haiku event billed $0.004; rounded to cents it read as $0.00 and +0%
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self.write(tmp, '"d","u","","","","","","Included","claude-haiku-5-5-low","No","28432","6","27127","927","56492","0.004"\n')
+            import csv
+            with path.open() as fh:
+                [row] = budget.calibrate(csv.DictReader(fh), budget.prices(Path("/nonexistent")))
+            report = cli.calibrate_report(path)
+        self.assertEqual(row[2], 0.004)
+        haiku = next(line for line in report.splitlines() if line.startswith("claude-haiku"))
+        self.assertNotIn("+0%", haiku)
+
+    AUTO_ROWS = ('"d","u","","","","","","Included","grok-4.7-high (Auto Balanced)","No","0","1000000","0","0","1000000","2.00"\n',
+                 '"d","u","","","","","","Included","auto","No","0","1000000","0","0","1000000","1.00"\n',
+                 '"d","u","","","","","","Included","claude-opus-5-5-high","No","0","1000000","0","0","1000000","4.00"\n')
+
+    def test_auto_view_prices_every_auto_event_as_the_hook_sees_it(self):
+        # the hook only gets auto-<mode>, so it prices a turn Auto routed to Grok with the auto row
+        import csv
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self.write(tmp, *self.AUTO_ROWS)
+            with path.open() as fh:
+                rows = budget.auto_view(csv.DictReader(fh), budget.prices(Path("/nonexistent")))
+        self.assertEqual(rows, [("grok-4.7-high (Auto Balanced)", 1, 2.0, 2.25), ("auto", 1, 1.0, 2.25)])
+
+    def test_report_has_an_auto_section_with_its_total_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            report = cli.calibrate_report(self.write(tmp, *self.AUTO_ROWS))
+        section = report.split("Auto, como lo ve el hook")[1]
+        self.assertIn("grok-4.7-high (Auto Balanced)", section)
+        self.assertNotIn("claude-opus", section)
+        self.assertRegex(section, r"total auto\s+2\s+3\.00\s+4\.50\s+\+50%")
+
     @staticmethod
     def iso(t):
         import datetime
@@ -420,12 +453,26 @@ class TestCalibrate(unittest.TestCase):
             path, _ = self.reconcile_fixture(tmp)
             self.assertIn("ningún turno de los hooks", cli.calibrate_report(path, ledger=[]))
 
-    def test_gemini_pro_has_its_own_price_and_flash_keeps_gemini(self):
+    def test_gemini_pro_has_its_own_price(self):
         table = budget.prices(Path("/nonexistent"))
         self.assertEqual(budget.rate("gemini-3.1-pro", table)["prefix"], "gemini-3.1-pro")
-        self.assertEqual(budget.rate("gemini-3.8-flash-low", table)["prefix"], "gemini")
         event = {"model": "gemini-3.1-pro", "input_tokens": 147101, "cache_read_tokens": 102015, "output_tokens": 3288}
         self.assertAlmostEqual(budget.cost(event, table), 0.18, delta=0.01)  # the one billed event: $0.18
+
+    def test_gemini_flash_has_its_own_price_without_surcharge(self):
+        # Usage CSV 2026-10-25: a cached Flash event billed $0.004; only list price without surcharge gives it
+        table = budget.prices(Path("/nonexistent"))
+        self.assertEqual(budget.rate("gemini-3.8-flash-low", table)["prefix"], "gemini-3.8-flash")
+        cached = {"model": "gemini-3.8-flash-low", "input_tokens": 22984, "cache_read_tokens": 19800, "output_tokens": 1}
+        self.assertAlmostEqual(budget.cost(cached, table), 0.004, delta=0.0005)
+        uncached = {"model": "gemini-3.8-flash-low", "input_tokens": 23299, "output_tokens": 132}
+        self.assertAlmostEqual(budget.cost(uncached, table), 0.02, delta=0.005)  # billed $0.02
+
+    def test_kimi_k3_has_its_own_price(self):
+        table = budget.prices(Path("/nonexistent"))
+        self.assertEqual(budget.rate("kimi-k3", table)["prefix"], "kimi-k3")
+        event = {"model": "kimi-k3", "input_tokens": 1_000_000, "cache_read_tokens": 1_000_000, "output_tokens": 0}
+        self.assertAlmostEqual(budget.cost(event, table), 0.30 + 0.25, places=4)  # cache read + surcharge on 1M input
 
     def test_report_flags_a_model_off_by_more_than_ten_percent(self):
         with tempfile.TemporaryDirectory() as tmp:
