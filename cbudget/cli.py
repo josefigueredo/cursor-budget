@@ -106,7 +106,8 @@ def calibrate_report(csv_path: Path, tolerance: float = 0.10, ledger: Optional[l
     import csv
     with csv_path.open(newline="", encoding="utf-8") as fh:
         raw = list(csv.DictReader(fh))
-    rows = budget.calibrate(raw, budget.prices())
+    table = budget.prices()
+    rows = budget.calibrate(raw, table)
     lines = [f"{'modelo':42s} {'eventos':>7s} {'cobrado':>9s} {'estimado':>9s} {'error':>6s}  precio usado"]
     billed = estimated = 0.0
     for model, n, b, e, prefix in rows:
@@ -115,9 +116,22 @@ def calibrate_report(csv_path: Path, tolerance: float = 0.10, ledger: Optional[l
         flag = "  <- ajustar" if b >= 0.5 and abs(err) > tolerance or prefix == "UNKNOWN" and b > 0 else ""
         lines.append(f"{model:42s} {n:7d} {b:9.2f} {e:9.2f} {err:+6.0%}  {prefix}{flag}")
     lines.append(f"{'total':42s} {'':7s} {billed:9.2f} {estimated:9.2f}")
+    lines += auto_section(budget.auto_view(raw, table))
     if ledger is not None:
         lines += [""] + hooks_against_csv(budget.reconcile(raw, ledger))
     return "\n".join(lines)
+
+
+def auto_section(rows: list) -> list:
+    """The hook sees every Auto turn as auto-<mode>: how far the auto row is from what each routed model billed."""
+    if not rows:
+        return []
+    err = lambda b, e: f"{(e - b) / b:+6.0%}" if b else f"{'':6s}"
+    lines = ["", "Auto, como lo ve el hook (auto-<modo>, todo con el precio de la fila auto):"]
+    lines += [f"  {m:40s} {n:7d} {b:9.2f} {e:9.2f} {err(b, e)}" for m, n, b, e in rows]
+    n, b, e = (sum(r[i] for r in rows) for i in (1, 2, 3))
+    lines.append(f"  {'total auto':40s} {n:7d} {b:9.2f} {e:9.2f} {err(b, e)}")
+    return lines
 
 
 def hooks_against_csv(r: dict) -> list:
