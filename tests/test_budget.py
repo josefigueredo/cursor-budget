@@ -420,12 +420,26 @@ class TestCalibrate(unittest.TestCase):
             path, _ = self.reconcile_fixture(tmp)
             self.assertIn("ningún turno de los hooks", cli.calibrate_report(path, ledger=[]))
 
-    def test_gemini_pro_has_its_own_price_and_flash_keeps_gemini(self):
+    def test_gemini_pro_has_its_own_price(self):
         table = budget.prices(Path("/nonexistent"))
         self.assertEqual(budget.rate("gemini-3.1-pro", table)["prefix"], "gemini-3.1-pro")
-        self.assertEqual(budget.rate("gemini-3.8-flash-low", table)["prefix"], "gemini")
         event = {"model": "gemini-3.1-pro", "input_tokens": 147101, "cache_read_tokens": 102015, "output_tokens": 3288}
         self.assertAlmostEqual(budget.cost(event, table), 0.18, delta=0.01)  # the one billed event: $0.18
+
+    def test_gemini_flash_has_its_own_price_without_surcharge(self):
+        # Usage CSV 2026-10-25: a cached Flash event billed $0.004; only list price without surcharge gives it
+        table = budget.prices(Path("/nonexistent"))
+        self.assertEqual(budget.rate("gemini-3.8-flash-low", table)["prefix"], "gemini-3.8-flash")
+        cached = {"model": "gemini-3.8-flash-low", "input_tokens": 22984, "cache_read_tokens": 19800, "output_tokens": 1}
+        self.assertAlmostEqual(budget.cost(cached, table), 0.004, delta=0.0005)
+        uncached = {"model": "gemini-3.8-flash-low", "input_tokens": 23299, "output_tokens": 132}
+        self.assertAlmostEqual(budget.cost(uncached, table), 0.02, delta=0.005)  # billed $0.02
+
+    def test_kimi_k3_has_its_own_price(self):
+        table = budget.prices(Path("/nonexistent"))
+        self.assertEqual(budget.rate("kimi-k3", table)["prefix"], "kimi-k3")
+        event = {"model": "kimi-k3", "input_tokens": 1_000_000, "cache_read_tokens": 1_000_000, "output_tokens": 0}
+        self.assertAlmostEqual(budget.cost(event, table), 0.30 + 0.25, places=4)  # cache read + surcharge on 1M input
 
     def test_report_flags_a_model_off_by_more_than_ten_percent(self):
         with tempfile.TemporaryDirectory() as tmp:

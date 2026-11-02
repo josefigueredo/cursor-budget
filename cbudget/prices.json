@@ -11,6 +11,8 @@
     {"prefix": "gpt-5.6-sol", "input": 4.0, "cache_read": 0.40, "output": 20.0, "surcharge": true, "cache_write_multiplier": 1.0, "source": "fast.io"},
     {"prefix": "gpt-5.3-codex", "input": 1.75, "cache_read": 0.175, "output": 14.0, "surcharge": true, "cache_write_multiplier": 1.0, "source": "estimate"},
     {"prefix": "gemini-3.1-pro", "input": 2.0, "cache_read": 0.20, "output": 12.0, "surcharge": true, "cache_write_multiplier": 1.0, "source": "Gemini Pro list price; one usage CSV event: estimated $0.188, billed $0.18. Before this row Pro was priced as Flash (-56%)"},
+    {"prefix": "gemini-3.8-flash", "input": 0.75, "cache_read": 0.075, "output": 3.50, "surcharge": false, "cache_write_multiplier": 1.0, "source": "Cursor's model table 2026-11; usage CSV 2026-10-25: all 5 events fit list price without surcharge (a cached one billed $0.004, estimated $0.0039). The gemini row below estimated it at $0.0083"},
+    {"prefix": "kimi-k3", "input": 3.0, "cache_read": 0.30, "output": 15.0, "surcharge": true, "cache_write_multiplier": 1.0, "source": "Cursor's model table 2026-11; not calibrated: the usage CSV only has it as Auto Balanced, Free and without tokens"},
     {"prefix": "gemini", "input": 0.50, "cache_read": 0.05, "output": 3.0, "surcharge": true, "cache_write_multiplier": 1.0, "source": "estimate"},
     {"prefix": "cursor-grok", "input": 2.0, "cache_read": 0.50, "output": 6.0, "surcharge": false, "cache_write_multiplier": 1.0, "source": "fast.io (Grok 4.7); usage CSV +6%"},
     {"prefix": "grok", "input": 2.0, "cache_read": 0.50, "output": 6.0, "surcharge": false, "cache_write_multiplier": 1.0, "source": "as cursor-grok; the CSV names Auto-routed Grok grok-4.7-high"},
